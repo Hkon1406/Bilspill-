@@ -1,1 +1,171 @@
 
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Fri Kjøring</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;overflow:hidden;font-family:Arial,sans-serif;background:#8dd7ff;color:white}
+#game{position:fixed;inset:0}
+#hud{position:fixed;top:15px;left:15px;right:15px;display:flex;justify-content:space-between;align-items:flex-start;pointer-events:none}
+.panel{background:#102338d9;padding:12px 16px;border-radius:14px;box-shadow:0 4px 16px #0003}
+#speed{font-size:27px;font-weight:800}
+.small{font-size:12px;color:#c5dfef}
+#message{position:fixed;top:95px;left:0;right:0;text-align:center;color:white;text-shadow:0 2px 5px #123;font-weight:bold}
+#controls{position:fixed;bottom:24px;left:0;right:0;display:flex;justify-content:space-between;padding:0 22px;align-items:end}
+.group{display:flex;gap:12px}
+.control{width:70px;height:70px;border:2px solid #ffffff90;border-radius:20px;background:#102338b9;color:white;font-size:27px;font-weight:bold;touch-action:none;user-select:none}
+.control:active{background:#2678a8}
+#gas{height:85px;background:#188c53d9}
+#brake{background:#a83d42d9}
+#help{position:fixed;bottom:8px;left:0;right:0;text-align:center;font-size:11px;color:white;text-shadow:0 1px 4px #000}
+#loading{position:fixed;inset:0;display:grid;place-items:center;background:#102338;color:white;font-size:20px;z-index:5}
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div id="loading">🏎️ Starter motoren …</div>
+<div id="hud">
+  <div class="panel"><div style="font-weight:bold">🏁 FRI KJØRING</div><div class="small">3D DEMO</div></div>
+  <div class="panel"><div id="speed">0 km/t</div><div class="small">HASTIGHET</div></div>
+</div>
+<div id="message">Trykk på gassen for å kjøre!</div>
+<div id="controls">
+  <div class="group">
+    <button class="control" id="left" aria-label="Sving venstre">◀</button>
+    <button class="control" id="right" aria-label="Sving høyre">▶</button>
+  </div>
+  <div class="group">
+    <button class="control" id="brake" aria-label="Brems">▼</button>
+    <button class="control" id="gas" aria-label="Gass">▲</button>
+  </div>
+</div>
+<div id="help">Mobil: hold inne knappene · PC: piltaster eller WASD</div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script>
+(function(){
+const loading=document.getElementById('loading');
+if(!window.THREE){loading.textContent='Kunne ikke laste 3D-motoren. Sjekk internett og prøv igjen.';return;}
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x8dd7ff);
+scene.fog=new THREE.Fog(0x8dd7ff,75,260);
+const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,0.1,500);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));
+renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+document.getElementById('game').appendChild(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xffffff,0x65804a,2));
+const sun=new THREE.DirectionalLight(0xffffff,2.2);
+sun.position.set(-25,45,15);sun.castShadow=true;scene.add(sun);
+const mat=(color,roughness=0.8)=>new THREE.MeshStandardMaterial({color,roughness});
+const grass=mat(0x58a84d),road=mat(0x353a43),line=mat(0xffffff),dark=mat(0x18222c);
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(2000,2000),grass);
+ground.rotation.x=-Math.PI/2;ground.position.y=-0.08;ground.receiveShadow=true;scene.add(ground);
+const roadGroup=new THREE.Group();scene.add(roadGroup);
+const roadWidth=12,segmentLength=35,segments=16;
+for(let i=0;i<segments;i++){
+ const z=-i*segmentLength;
+ const r=new THREE.Mesh(new THREE.BoxGeometry(roadWidth,0.08,segmentLength),road);
+ r.position.set(0,0,z-segmentLength/2);r.receiveShadow=true;roadGroup.add(r);
+ for(let x of [-6.1,6.1]){
+  const edge=new THREE.Mesh(new THREE.BoxGeometry(0.16,0.1,segmentLength),line);
+  edge.position.set(x,0.06,z-segmentLength/2);roadGroup.add(edge);
+ }
+ for(let j=0;j<3;j++){
+  const dash=new THREE.Mesh(new THREE.BoxGeometry(0.16,0.1,4),line);
+  dash.position.set(0,0.07,z-j*11-4);roadGroup.add(dash);
+ }
+}
+const car=new THREE.Group();scene.add(car);
+const body=new THREE.Mesh(new THREE.BoxGeometry(1.9,0.55,3.8),mat(0xe52c35,0.35));
+body.position.y=0.8;body.castShadow=true;car.add(body);
+const cabin=new THREE.Mesh(new THREE.BoxGeometry(1.48,0.65,1.8),mat(0x9bd8ec,0.25));
+cabin.position.set(0,1.35,-0.15);cabin.castShadow=true;car.add(cabin);
+const hood=new THREE.Mesh(new THREE.BoxGeometry(1.72,0.16,1.05),mat(0xb91f2a,0.35));
+hood.position.set(0,1.02,-1.15);car.add(hood);
+for(let x of [-1,1]){
+ for(let z of [-1.25,1.25]){
+  const wheel=new THREE.Mesh(new THREE.CylinderGeometry(0.38,0.38,0.24,16),dark);
+  wheel.rotation.z=Math.PI/2;wheel.position.set(x*0.98,0.45,z);wheel.castShadow=true;car.add(wheel);
+ }
+ const lamp=new THREE.Mesh(new THREE.BoxGeometry(0.35,0.16,0.08),mat(0xfff2b0,0.3));
+ lamp.position.set(x*0.62,0.83,1.92);car.add(lamp);
+}
+car.position.set(0,0,4);
+const trees=[];
+const treeMat=mat(0x287a38),trunkMat=mat(0x765039);
+function tree(x,z){
+ const g=new THREE.Group();
+ const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.23,1.4,7),trunkMat);
+ trunk.position.y=.7;g.add(trunk);
+ const crown=new THREE.Mesh(new THREE.ConeGeometry(1.05,2.8,8),treeMat);
+ crown.position.y=2.45;g.add(crown);
+ g.position.set(x,0,z);scene.add(g);trees.push(g);
+}
+for(let z=-15;z>-540;z-=15){
+ tree(-10-Math.random()*12,z-Math.random()*8);
+ tree(10+Math.random()*12,z-Math.random()*8);
+}
+let speed=0,steer=0,carX=0,roadOffset=0;
+const keys={left:false,right:false,gas:false,brake:false};
+function bind(id,key){
+ const el=document.getElementById(id);
+ const down=e=>{e.preventDefault();keys[key]=true;};
+ const up=e=>{e.preventDefault();keys[key]=false;};
+ el.addEventListener('pointerdown',down);
+ el.addEventListener('pointerup',up);
+ el.addEventListener('pointercancel',up);
+ el.addEventListener('pointerleave',up);
+}
+bind('left','left');bind('right','right');bind('gas','gas');bind('brake','brake');
+addEventListener('keydown',e=>{
+ const k=e.key.toLowerCase();
+ if(['arrowleft','a'].includes(k))keys.left=true;
+ if(['arrowright','d'].includes(k))keys.right=true;
+ if(['arrowup','w'].includes(k))keys.gas=true;
+ if(['arrowdown','s'].includes(k))keys.brake=true;
+});
+addEventListener('keyup',e=>{
+ const k=e.key.toLowerCase();
+ if(['arrowleft','a'].includes(k))keys.left=false;
+ if(['arrowright','d'].includes(k))keys.right=false;
+ if(['arrowup','w'].includes(k))keys.gas=false;
+ if(['arrowdown','s'].includes(k))keys.brake=false;
+});
+const clock=new THREE.Clock();
+function animate(){
+ requestAnimationFrame(animate);
+ const dt=Math.min(clock.getDelta(),0.04);
+ if(keys.gas)speed=Math.min(speed+24*dt,95);
+ else speed=Math.max(0,speed-5*dt);
+ if(keys.brake)speed=Math.max(0,speed-45*dt);
+ steer=(keys.left?1:0)-(keys.right?1:0);
+ carX+=steer*speed*0.018*dt*12;
+ carX=Math.max(-4.7,Math.min(4.7,carX));
+ car.position.x=carX;
+ car.rotation.z=-steer*0.08*Math.min(speed/35,1);
+ roadOffset+=speed*dt*0.7;
+ roadGroup.position.z=roadOffset%segmentLength;
+ for(const t of trees){
+  t.position.z+=speed*dt*0.7;
+  if(t.position.z>12)t.position.z-=540;
+ }
+ camera.position.lerp(new THREE.Vector3(car.position.x*0.55,5.2,11.5),0.08);
+ camera.lookAt(car.position.x*0.3,0.8,-9);
+ document.getElementById('speed').textContent=Math.round(speed)+' km/t';
+ renderer.render(scene,camera);
+}
+addEventListener('resize',()=>{
+ camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+ renderer.setSize(innerWidth,innerHeight);
+});
+loading.style.display='none';
+animate();
+})();
+</script>
+</body>
+</html>
