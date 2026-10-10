@@ -111,8 +111,17 @@ body{margin:0;overflow:hidden;font-family:Arial,sans-serif;background:#91d9ff;co
 
 <div id="help">Mobil: hold inne knappene · PC: piltaster eller WASD</div>
 
+<!-- FIKS: Importkartet lar GLTFLoader finne samme Three.js-modul -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+  }
+}
+</script>
+
 <script type="module">
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import * as THREE from 'three';
 import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
 
 (function(){
@@ -120,6 +129,8 @@ const loading=document.getElementById('loading');
 let realisticWorld=localStorage.getItem('friKjoringWorldStyle')==='realistic';
 let externalCarModel=null;
 let externalModelLoaded=false;
+
+try {
 
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x91d9ff);
@@ -164,7 +175,6 @@ const chrome=mat(0xb8c5ce,.25,.7);
 const lampMat=new THREE.MeshStandardMaterial({color:0xfff1b4,emissive:0xffcf69,emissiveIntensity:.5});
 const tailMat=new THREE.MeshStandardMaterial({color:0xf51e28,emissive:0x9c0010,emissiveIntensity:.5});
 
-/* Teksturer som gir realistisk modus mer detaljerte overflater */
 function makeNoiseTexture(base,variation,count){
  const canvas=document.createElement('canvas');
  canvas.width=canvas.height=512;
@@ -189,14 +199,12 @@ grassTexture.repeat.set(85,85);
 const asphaltTexture=makeNoiseTexture('#292c30',100,14000);
 asphaltTexture.repeat.set(2,10);
 
-/* BAKKEN */
 const ground=new THREE.Mesh(new THREE.PlaneGeometry(3000,3000),grass);
 ground.rotation.x=-Math.PI/2;
 ground.position.y=-.15;
 ground.receiveShadow=true;
 scene.add(ground);
 
-/* FJELL */
 for(let i=0;i<24;i++){
  const a=i/24*Math.PI*2;
  const rad=145+Math.random()*60;
@@ -210,7 +218,6 @@ for(let i=0;i<24;i++){
  scene.add(hill);
 }
 
-/* SKYER */
 const cloudMat=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.8});
 for(let i=0;i<15;i++){
  const cloud=new THREE.Group();
@@ -223,7 +230,6 @@ for(let i=0;i<15;i++){
  scene.add(cloud);
 }
 
-/* VEI */
 const roadGroup=new THREE.Group();
 scene.add(roadGroup);
 const roadWidth=13,segmentLength=40,segmentCount=40;
@@ -254,7 +260,6 @@ function makeRoadSegment(i){
 }
 for(let i=0;i<segmentCount;i++)makeRoadSegment(i);
 
-/* TRÆR OG BUSKER */
 const roadside=[],trees=[],shrubs=[];
 const treeMats=[mat(0x236c37),mat(0x2f8241),mat(0x347c3a)];
 
@@ -294,7 +299,6 @@ for(let i=0;i<100;i++){
  shrubs.push(shrub);
 }
 
-/* SPILLERBIL */
 const car=new THREE.Group();
 scene.add(car);
 
@@ -308,7 +312,6 @@ function part(geo,material,x,y,z){
  return mesh;
 }
 
-/* Original Arcade-bil */
 part(new THREE.BoxGeometry(2.15,.38,4.3),red,0,.76,0);
 part(new THREE.BoxGeometry(2.02,.2,3.8),redDark,0,.57,0);
 part(new THREE.BoxGeometry(1.95,.15,1.3),red,0,.98,1.35);
@@ -357,7 +360,6 @@ for(const x of [-1,1]){
  }
 }
 
-/* Glatt reserve-karosseri hvis 3D-modellen ikke lastes */
 const realisticBody=new THREE.Group();
 realisticBody.name='realisticBody';
 car.add(realisticBody);
@@ -409,7 +411,6 @@ smoothBox(smoothTrim,0,1.015,1.28,.23,.025,.48);
 for(const side of [-1,1])smoothBox(smoothChrome,side*.42,.995,1.25,.035,.018,.36);
 realisticBody.visible=false;
 
-/* Ekstern 3D-modell til Realistisk verden */
 function prepareCarModel(source){
  const model=source.clone(true);
  model.rotation.y=-Math.PI/2;
@@ -445,23 +446,6 @@ function attachModel(vehicle){
  const wrapper=prepareCarModel(externalCarModel);
  vehicle.add(wrapper);
 }
-const modelLoader=new GLTFLoader();
-modelLoader.load(
- 'https://raw.githubusercontent.com/JaronKBragg7337/spectral-gt-rs/main/spectral_gt_rs_game_ready.glb',
- gltf=>{
-  externalCarModel=gltf.scene;
-  externalModelLoaded=true;
-  attachModel(car);
-  trafficCars.forEach(t=>attachModel(t));
-  applyWorldStyle();
- },
- undefined,
- error=>{
-  console.warn('3D-bilmodellen kunne ikke lastes. Reservebilen brukes.',error);
-  externalModelLoaded=false;
-  applyWorldStyle();
- }
-);
 
 const shadow=new THREE.Mesh(new THREE.CircleGeometry(1.7,24),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.16}));
 shadow.rotation.x=-Math.PI/2;
@@ -471,7 +455,6 @@ car.add(shadow);
 car.rotation.y=Math.PI;
 car.position.set(3.1,0,4);
 
-/* EKSPLOSJON */
 const explosion=new THREE.Group();
 scene.add(explosion);
 explosion.visible=false;
@@ -532,7 +515,6 @@ function updateExplosion(dt){
  if(explosionTime>=2){explosionActive=false;explosion.visible=false;}
 }
 
-/* TRAFIKK */
 const trafficCars=[];
 const trafficColors=[0x2878d0,0xf0c52d];
 function makeTrafficCar(index,direction){
@@ -558,7 +540,6 @@ function makeTrafficCar(index,direction){
 makeTrafficCar(0,'same');
 makeTrafficCar(1,'opposite');
 
-/* BILBUTIKK OG OPPDRAG */
 const moneyEl=document.getElementById('coins');
 const overlay=document.getElementById('overlay');
 const overlayTitle=document.getElementById('overlayTitle');
@@ -605,6 +586,7 @@ const missions=[
  {id:'cars3',stat:'cars',title:'🚘 Bilentusiast',description:'Eie 3 forskjellige biler.',goal:3,reward:250,unit:'biler'},
  {id:'cars5',stat:'cars',title:'🏎️ Bilkolleksjon',description:'Eie alle 5 bilene.',goal:5,reward:700,unit:'biler'}
 ];
+
 function saveEconomy(){
  localStorage.setItem('friKjoringMoney',String(money));
  localStorage.setItem('friKjoringOwnedCars',JSON.stringify(ownedCars));
@@ -616,7 +598,6 @@ function updateDistanceDisplay(){
  highscoreDisplay.textContent='🏆 Highscore: '+Math.floor(highScoreMeters)+' m';
 }
 
-/* VERDENSMODUS */
 function applyWorldStyle(){
  realisticWorld=localStorage.getItem('friKjoringWorldStyle')==='realistic';
  scene.background.setHex(realisticWorld?0x9fc8df:0x91d9ff);
@@ -648,6 +629,7 @@ function applyWorldStyle(){
  trafficCars.forEach(setCarStyle);
  localStorage.setItem('friKjoringWorldStyle',realisticWorld?'realistic':'classic');
 }
+
 function renderSettings(){
  overlayTitle.textContent='⚙️ Innstillinger';
  overlayText.textContent='Velg verden du vil kjøre i. Valget lagres automatisk på denne enheten.';
@@ -667,6 +649,7 @@ function renderSettings(){
   });
  });
 }
+
 function paintPlayerCar(){
  const chosen=carsForSale[selectedCar]||carsForSale[0];
  const shape=chosen.scale||[1,1,1];
@@ -762,7 +745,6 @@ document.getElementById('missionsOpen').addEventListener('click',openMissions);
 document.getElementById('settingsOpen').addEventListener('click',openSettings);
 document.getElementById('closeOverlay').addEventListener('click',()=>overlay.style.display='none');
 
-/* MYNTER */
 const roadCoins=[];
 const coinMaterial=new THREE.MeshStandardMaterial({color:0xffd22e,metalness:.72,roughness:.25,emissive:0x805400,emissiveIntensity:.18});
 function makeRoadCoin(z,i){
@@ -795,7 +777,6 @@ function resetTraffic(){
  }
 }
 
-/* KONTROLLER */
 let speed=0,carX=3.1,steer=0,crashed=false;
 const keys={left:false,right:false,gas:false,brake:false};
 function resetKeys(){for(const k in keys)keys[k]=false;}
@@ -858,7 +839,6 @@ addEventListener('keyup',e=>{
 });
 for(const object of roadside)object.userData.originalZ=object.position.z;
 
-/* KAMERA */
 camera.position.set(0,5.7,12.5);
 camera.lookAt(0,1,-8);
 const clock=new THREE.Clock();
@@ -934,7 +914,6 @@ function animate(){
   updateDistanceDisplay();
  }
 
- /* KRASJ MED TRÆR */
  if(!crashed){
   for(const tree of trees){
    const dx=tree.position.x-car.position.x;
@@ -954,7 +933,6 @@ function animate(){
    }
   }
  }
- /* KRASJ MED TRAFIKK */
  if(!crashed){
   for(const t of trafficCars){
    const dx=Math.abs(t.position.x-car.position.x);
@@ -981,14 +959,41 @@ function animate(){
  if(!crashed)document.getElementById('message').style.opacity=speed>5?'0':'1';
  renderer.render(scene,camera);
 }
+
 addEventListener('resize',()=>{
  camera.aspect=innerWidth/innerHeight;
  camera.updateProjectionMatrix();
  renderer.setSize(innerWidth,innerHeight);
  renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));
 });
+
+/* Last 3D-bilen separat. Spillet starter også om denne feiler. */
+const modelLoader=new GLTFLoader();
+modelLoader.load(
+ 'https://raw.githubusercontent.com/JaronKBragg7337/spectral-gt-rs/main/spectral_gt_rs_game_ready.glb',
+ gltf=>{
+  externalCarModel=gltf.scene;
+  externalModelLoaded=true;
+  attachModel(car);
+  trafficCars.forEach(t=>attachModel(t));
+  applyWorldStyle();
+ },
+ undefined,
+ error=>{
+  console.warn('3D-bilmodellen kunne ikke lastes. Reservebilen brukes.',error);
+  externalModelLoaded=false;
+  applyWorldStyle();
+ }
+);
+
 loading.style.display='none';
 animate();
+
+} catch(error) {
+ console.error('Fri Kjøring klarte ikke å starte:',error);
+ loading.innerHTML='⚠️ Spillet kunne ikke starte.<br><br>Prøv å oppdatere siden og sjekk internettforbindelsen.<br><br><small>'+String(error.message||error)+'</small>';
+ loading.style.display='grid';
+}
 })();
 </script>
 </body>
