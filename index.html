@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="no">
 <head>
@@ -26,6 +25,8 @@ body{margin:0;overflow:hidden;font-family:Arial,sans-serif;background:#91d9ff;co
 #gameMenu{position:fixed;top:88px;left:14px;display:flex;gap:7px;pointer-events:auto;z-index:4}
 .menuBtn,.actionBtn{border:1px solid #ffffff65;border-radius:11px;background:#081828e8;color:white;padding:10px 12px;font-weight:bold;font-size:13px;box-shadow:0 3px 10px #0003}
 .menuBtn:active,.actionBtn:active{transform:scale(.97);background:#2678a8}
+#distanceDisplay,#highscoreDisplay{font-size:12px;font-weight:bold;margin-top:4px;color:#e1f0fb}
+#highscoreDisplay{color:#ffe27a}
 #coins{font-size:19px;font-weight:800;color:#ffe27a;margin-top:3px}
 #overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#06111dd9;z-index:10;padding:18px}
 #overlayCard{width:min(520px,100%);max-height:85vh;overflow:auto;background:#102338;border:1px solid #ffffff35;border-radius:20px;padding:20px;box-shadow:0 15px 50px #0008}
@@ -59,15 +60,28 @@ body{margin:0;overflow:hidden;font-family:Arial,sans-serif;background:#91d9ff;co
 <body>
 <div id="game"></div>
 <div id="loading">🏎️ Starter motoren …</div>
+
 <div id="hud">
- <div class="panel"><div style="font-weight:bold">🏁 FRI KJØRING</div><div class="small">3D KJØRESPILL</div></div>
- <div class="panel"><div id="speed">0 km/t</div><div class="small">HASTIGHET</div><div id="coins">🪙 0 kr</div></div>
+ <div class="panel">
+  <div style="font-weight:bold">🏁 FRI KJØRING</div>
+  <div class="small">3D KJØRESPILL</div>
+ </div>
+ <div class="panel">
+  <div id="speed">0 km/t</div>
+  <div class="small">HASTIGHET</div>
+  <div id="distanceDisplay" class="small">📏 Kjørt: 0 m</div>
+  <div id="highscoreDisplay" class="small">🏆 Highscore: 0 m</div>
+  <div id="coins">🪙 0 kr</div>
+ </div>
 </div>
+
 <div id="message">Trykk på gassen for å kjøre!</div>
+
 <div id="gameMenu">
  <button class="menuBtn" id="shopOpen">🚘 Bilbutikk</button>
  <button class="menuBtn" id="missionsOpen">🎯 Oppdrag</button>
 </div>
+
 <div id="overlay">
  <div id="overlayCard">
   <div id="overlayTitle">Bilbutikk</div>
@@ -78,10 +92,18 @@ body{margin:0;overflow:hidden;font-family:Arial,sans-serif;background:#91d9ff;co
   </div>
  </div>
 </div>
+
 <div id="controls">
- <div class="group"><button class="control" id="left" aria-label="Sving venstre">◀</button><button class="control" id="right" aria-label="Sving høyre">▶</button></div>
- <div class="group"><button class="control" id="brake" aria-label="Brems">▼</button><button class="control" id="gas" aria-label="Gass">▲</button></div>
+ <div class="group">
+  <button class="control" id="left" aria-label="Sving venstre">◀</button>
+  <button class="control" id="right" aria-label="Sving høyre">▶</button>
+ </div>
+ <div class="group">
+  <button class="control" id="brake" aria-label="Brems">▼</button>
+  <button class="control" id="gas" aria-label="Gass">▲</button>
+ </div>
 </div>
+
 <div id="help">Mobil: hold inne knappene · PC: piltaster eller WASD</div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
@@ -576,28 +598,40 @@ const overlay=document.getElementById('overlay');
 const overlayTitle=document.getElementById('overlayTitle');
 const overlayText=document.getElementById('overlayText');
 const overlayContent=document.getElementById('overlayContent');
+
 const carsForSale=[
-  {name:'Gammel småbil',price:0,color:0x66808a,maxSpeed:165,scale:[.88,.88,.88],description:'Startbilen. Litt treg, men helt gratis.'},
-  {name:'Bybil Sport',price:150,color:0x28a9a1,maxSpeed:180,scale:[.93,.91,.94],description:'Et lite steg opp fra startbilen.'},
-  {name:'Original sportsbil',price:350,color:0xd8202e,maxSpeed:250,scale:[1,1,1],description:'Den originale røde sportsbilen.'},
-  {name:'Gullraketten',price:850,color:0xf0c52d,maxSpeed:325,scale:[1.02,1,1.04],description:'Raskere bil med ekstra sportslig stil.'},
-  {name:'SUPERCAR X',price:1800,color:0x9b59d0,maxSpeed:500,scale:[1.08,1.03,1.08],description:'Den raskeste bilen i butikken – hele 500 km/t!'}
+ {name:'Gammel småbil',price:0,color:0x66808a,maxSpeed:165,scale:[.88,.88,.88],description:'Startbilen. Litt treg, men helt gratis.'},
+ {name:'Bybil Sport',price:150,color:0x28a9a1,maxSpeed:180,scale:[.93,.91,.94],description:'Et lite steg opp fra startbilen.'},
+ {name:'Original sportsbil',price:350,color:0xd8202e,maxSpeed:250,scale:[1,1,1],description:'Den originale røde sportsbilen.'},
+ {name:'Gullraketten',price:850,color:0xf0c52d,maxSpeed:325,scale:[1.02,1,1.04],description:'Raskere bil med ekstra sportslig stil.'},
+ {name:'SUPERCAR X',price:1800,color:0x9b59d0,maxSpeed:500,scale:[1.08,1.03,1.08],description:'Den raskeste bilen i butikken – hele 500 km/t!'}
 ];
+
 let money=Number(localStorage.getItem('friKjoringMoney')||0);
 let ownedCars=JSON.parse(localStorage.getItem('friKjoringOwnedCars')||'[0]');
 let selectedCar=Number(localStorage.getItem('friKjoringSelectedCar')||0);
+
 if(!Array.isArray(ownedCars))ownedCars=[0];
 if(!ownedCars.includes(0))ownedCars.unshift(0);
 if(!carsForSale[selectedCar]||!ownedCars.includes(selectedCar))selectedCar=0;
+
 let distanceMeters=0;
+let runDistanceMeters=0;
+let highScoreMeters=Number(localStorage.getItem('friKjoringHighScoreMeters')||0);
+
+const distanceDisplay=document.getElementById('distanceDisplay');
+const highscoreDisplay=document.getElementById('highscoreDisplay');
+
 let drivingSeconds=0;
 let coinsCollected=0;
 let missionClaimed={};
+
 const missions=[
  {id:'distance',title:'Langtur',description:'Kjør 1 km.',goal:1000,reward:150,unit:'m'},
  {id:'coins',title:'Myntsamler',description:'Samle 8 mynter.',goal:8,reward:120,unit:'mynter'},
  {id:'time',title:'Hold det gående',description:'Kjør i 45 sekunder totalt.',goal:45,reward:100,unit:'sek'}
 ];
+
 let missionProgress={distance:0,coins:0,time:0};
 
 function saveEconomy(){
@@ -606,6 +640,12 @@ function saveEconomy(){
  localStorage.setItem('friKjoringSelectedCar',String(selectedCar));
  moneyEl.textContent='🪙 '+money+' kr';
 }
+
+function updateDistanceDisplay(){
+ distanceDisplay.textContent='📏 Kjørt: '+Math.floor(runDistanceMeters)+' m';
+ highscoreDisplay.textContent='🏆 Highscore: '+Math.floor(highScoreMeters)+' m';
+}
+
 function paintPlayerCar(){
  const chosen=carsForSale[selectedCar]||carsForSale[0];
  const shape=chosen.scale||[1,1,1];
@@ -618,7 +658,6 @@ function paintPlayerCar(){
   }
  });
 
- // Enkle visuelle detaljer gjør bilene lettere å skille fra hverandre.
  if(car.userData.carDetails){
   car.userData.carDetails.forEach(obj=>car.remove(obj));
  }
@@ -633,13 +672,11 @@ function paintPlayerCar(){
  });
 
  if(selectedCar===0){
-  // Startbilen får en enkel, litt eldre takdetalj.
   const roofBar=new THREE.Mesh(new THREE.BoxGeometry(1.05,.07,.09),dark);
   roofBar.position.set(0,1.47,-.25);
   car.add(roofBar);
   car.userData.carDetails.push(roofBar);
  }else if(selectedCar>=2){
-  // Sportsbilene får doble striper på panseret.
   for(const x of [-.27,.27]){
    const stripe=new THREE.Mesh(new THREE.BoxGeometry(.12,.025,.8),detailMat);
    stripe.position.set(x,1.065,1.38);
@@ -648,6 +685,7 @@ function paintPlayerCar(){
   }
  }
 }
+
 function selectCar(index){
  if(!ownedCars.includes(index))return;
  selectedCar=index;
@@ -655,19 +693,28 @@ function selectCar(index){
  paintPlayerCar();
  renderShop();
 }
+
 function renderShop(){
  overlayTitle.textContent='🚘 Bilbutikk';
  overlayText.textContent='Pengene dine: '+money+' kr. Kjør langt, samle mynter og fullfør oppdrag for å tjene mer.';
+
  overlayContent.innerHTML='<div class="shopGrid">'+carsForSale.map((c,i)=>{
   const owned=ownedCars.includes(i);
   const selected=selectedCar===i;
   const color='#'+c.color.toString(16).padStart(6,'0');
   let label=selected?'Valgt bil':owned?'Velg bilen':'Kjøp · '+c.price+' kr';
+
   return '<div class="shopCar"><div style="font-size:32px;color:'+color+'">🏎️</div><strong>'+c.name+'</strong><div class="small">Toppfart: '+c.maxSpeed+' km/t</div><p>'+c.description+'</p><button class="actionBtn" data-car="'+i+'">'+label+'</button></div>';
  }).join('')+'</div>';
+
  overlayContent.querySelectorAll('[data-car]').forEach(btn=>btn.addEventListener('click',()=>{
   const i=Number(btn.dataset.car);
-  if(ownedCars.includes(i)){selectCar(i);return;}
+
+  if(ownedCars.includes(i)){
+   selectCar(i);
+   return;
+  }
+
   if(money>=carsForSale[i].price){
    money-=carsForSale[i].price;
    ownedCars.push(i);
@@ -679,25 +726,32 @@ function renderShop(){
   }
  }));
 }
+
 function missionValue(m){
  if(m.id==='distance')return Math.floor(distanceMeters);
  if(m.id==='coins')return coinsCollected;
  return Math.floor(drivingSeconds);
 }
+
 function renderMissions(){
  overlayTitle.textContent='🎯 Oppdrag';
  overlayText.textContent='Fullfør oppdrag for å få ekstra penger. Belønningen kan hentes én gang per oppdrag.';
+
  overlayContent.innerHTML=missions.map(m=>{
   const value=missionValue(m);
   const done=value>=m.goal;
   const claimed=!!missionClaimed[m.id];
+
   const shown=m.id==='distance'?(Math.min(value,m.goal)+' / '+m.goal+' m'):
    m.id==='time'?(Math.min(value,m.goal)+' / '+m.goal+' sek'):(Math.min(value,m.goal)+' / '+m.goal+' mynter');
+
   return '<div class="shopCar" style="margin-bottom:9px"><strong>'+m.title+'</strong><div>'+m.description+'</div><div id="missionProgress">'+shown+'</div><button class="actionBtn" data-mission="'+m.id+'" '+(!done||claimed?'disabled':'')+'>'+ (claimed?'Hentet ✓':done?'Hent '+m.reward+' kr':'Ikke fullført ennå')+'</button></div>';
  }).join('');
+
  overlayContent.querySelectorAll('[data-mission]').forEach(btn=>btn.addEventListener('click',()=>{
   const id=btn.dataset.mission;
   const m=missions.find(x=>x.id===id);
+
   if(m&&missionValue(m)>=m.goal&&!missionClaimed[id]){
    missionClaimed[id]=true;
    money+=m.reward;
@@ -706,37 +760,64 @@ function renderMissions(){
   }
  }));
 }
-function openShop(){renderShop();overlay.style.display='flex';resetKeys();}
-function openMissions(){renderMissions();overlay.style.display='flex';resetKeys();}
+
+function openShop(){
+ renderShop();
+ overlay.style.display='flex';
+ resetKeys();
+}
+
+function openMissions(){
+ renderMissions();
+ overlay.style.display='flex';
+ resetKeys();
+}
+
 document.getElementById('shopOpen').addEventListener('click',openShop);
 document.getElementById('missionsOpen').addEventListener('click',openMissions);
 document.getElementById('closeOverlay').addEventListener('click',()=>overlay.style.display='none');
 
 // Mynter ligger langs veien og flyttes mot spilleren.
 const roadCoins=[];
-const coinMaterial=new THREE.MeshStandardMaterial({color:0xffd22e,metalness:.72,roughness:.25,emissive:0x805400,emissiveIntensity:.18});
+const coinMaterial=new THREE.MeshStandardMaterial({
+ color:0xffd22e,
+ metalness:.72,
+ roughness:.25,
+ emissive:0x805400,
+ emissiveIntensity:.18
+});
+
 function makeRoadCoin(z,i){
- const coin=new THREE.Mesh(new THREE.TorusGeometry(.42,.14,8,16),coinMaterial);
+ const coin=new THREE.Mesh(
+  new THREE.TorusGeometry(.42,.14,8,16),
+  coinMaterial
+ );
+
  coin.position.set(i%2===0?-3.1:3.1,.95,z);
  coin.rotation.x=Math.PI/2;
  coin.castShadow=true;
  coin.userData.baseX=coin.position.x;
  coin.userData.laneX=i%2===0?-3.1:3.1;
+
  scene.add(coin);
  roadCoins.push(coin);
 }
+
 const coinCount=8;
 const coinSpacing=58;
+
 for(let i=0;i<coinCount;i++)makeRoadCoin(-45-i*coinSpacing,i);
+
 function resetCoins(){
  roadCoins.forEach((coin,i)=>{
   coin.position.set(coin.userData.laneX,.95,-45-i*coinSpacing);
   coin.visible=true;
  });
 }
+
 saveEconomy();
 paintPlayerCar();
-
+updateDistanceDisplay();
 
 function resetTraffic(){
  for(const t of trafficCars){
@@ -790,34 +871,50 @@ function resetKeys(){
 }
 
 function restartGame(){
+ if(runDistanceMeters>highScoreMeters){
+  highScoreMeters=Math.floor(runDistanceMeters);
+  localStorage.setItem('friKjoringHighScoreMeters',String(highScoreMeters));
+ }
+
+ runDistanceMeters=0;
+ updateDistanceDisplay();
+
  speed=0;
  carX=3.1;
  steer=0;
  crashed=false;
+
  car.position.set(3.1,0,4);
  car.rotation.set(0,Math.PI,0);
+
  resetKeys();
 
  // Put the road, trees and bushes back at their starting positions.
  for(let i=0;i<roadSegments.length;i++){
   roadSegments[i].position.z=-i*segmentLength-segmentLength/2;
  }
+
  for(const object of roadside){
   object.position.z=object.userData.originalZ;
  }
+
  resetTraffic();
  resetCoins();
+
  explosionActive=false;
  explosion.visible=false;
  explosionTime=0;
  flash.intensity=0;
+
  document.getElementById('speed').textContent='0 km/t';
+
  const message=document.getElementById('message');
  message.textContent='Trykk på gassen for å kjøre!';
  message.style.opacity='1';
 }
 
 addEventListener('blur',resetKeys);
+
 document.addEventListener('visibilitychange',()=>{
  if(document.hidden)resetKeys();
 });
@@ -839,10 +936,6 @@ addEventListener('keydown',e=>{
 
 addEventListener('keyup',e=>{
  const k=e.key.toLowerCase();
-
- if(['arrowleft','arrowright','arrowup','arrowdown',' '].includes(k)){
-  e.preventDefault();
- }
 
  if(['arrowleft','a'].includes(k))keys.left=false;
  if(['arrowright','d'].includes(k))keys.right=false;
@@ -870,12 +963,15 @@ function animate(){
  if(crashed){
   speed=0;
   restartTimer-=dt;
+
   if(restartTimer<=0){
    restartGame();
   }
+
   renderer.render(scene,camera);
   return;
  }
+
  if(overlay.style.display==='flex'){
   renderer.render(scene,camera);
   return;
@@ -896,6 +992,7 @@ function animate(){
  steer=(keys.right?1:0)-(keys.left?1:0);
 
  const steeringPower=.85+Math.min(speed/100,1)*.45;
+
  carX+=steer*steeringPower*dt*(.9+speed*.026);
  carX=Math.max(-27,Math.min(27,carX));
 
@@ -939,7 +1036,9 @@ function animate(){
   const relativeSpeed=t.userData.direction==='same'
    ? speed-t.userData.trafficSpeed
    : speed+t.userData.trafficSpeed;
+
   t.position.z+=relativeSpeed*dt*.72;
+
   if(t.position.z>18){
    t.position.z=-155-Math.random()*75;
   }
@@ -949,10 +1048,12 @@ function animate(){
  for(const coin of roadCoins){
   coin.position.z+=movement;
   coin.rotation.z+=dt*2.8;
+
   if(coin.position.z>14){
    coin.position.z=-45-(coinCount-1)*coinSpacing-Math.random()*coinSpacing;
    coin.position.x=coin.userData.laneX;
   }
+
   if(coin.visible && Math.abs(coin.position.z-car.position.z)<3.1 &&
      Math.abs(coin.position.x-car.position.x)<1.35){
    coin.visible=false;
@@ -962,11 +1063,24 @@ function animate(){
    saveEconomy();
   }
  }
+
+ // Avstand og highscore
  if(speed>0){
-  distanceMeters+=speed*dt/3.6;
+  const travelled=speed*dt/3.6;
+
+  distanceMeters+=travelled;
+  runDistanceMeters+=travelled;
   drivingSeconds+=dt;
+
   missionProgress.distance=distanceMeters;
   missionProgress.time=drivingSeconds;
+
+  if(runDistanceMeters>highScoreMeters){
+   highScoreMeters=Math.floor(runDistanceMeters);
+   localStorage.setItem('friKjoringHighScoreMeters',String(highScoreMeters));
+  }
+
+  updateDistanceDisplay();
  }
 
  // TREE COLLISION
@@ -976,12 +1090,21 @@ function animate(){
    const dz=tree.position.z-car.position.z;
    const hitX=tree.userData.treeRadius+1.05;
    const hitZ=tree.scale.z*1.15+2.15;
+
    if(Math.abs(dx)<hitX && Math.abs(dz)<hitZ){
     crashed=true;
+
+    if(runDistanceMeters>highScoreMeters){
+     highScoreMeters=Math.floor(runDistanceMeters);
+     localStorage.setItem('friKjoringHighScoreMeters',String(highScoreMeters));
+    }
+
+    updateDistanceDisplay();
     speed=0;
     resetKeys();
     startExplosion();
     restartTimer=2;
+
     document.getElementById('message').textContent='💥 KRASJ!';
     document.getElementById('message').style.opacity='1';
     break;
@@ -994,12 +1117,21 @@ function animate(){
   for(const t of trafficCars){
    const dx=Math.abs(t.position.x-car.position.x);
    const dz=Math.abs(t.position.z-car.position.z);
+
    if(dx<1.85 && dz<4.15){
     crashed=true;
+
+    if(runDistanceMeters>highScoreMeters){
+     highScoreMeters=Math.floor(runDistanceMeters);
+     localStorage.setItem('friKjoringHighScoreMeters',String(highScoreMeters));
+    }
+
+    updateDistanceDisplay();
     speed=0;
     resetKeys();
     startExplosion();
     restartTimer=2;
+
     document.getElementById('message').textContent='💥 KRASJ! Kollisjon med bil!';
     document.getElementById('message').style.opacity='1';
     break;
@@ -1023,6 +1155,7 @@ function animate(){
 
  document.getElementById('speed').textContent=
   Math.round(speed)+' km/t';
+
  moneyEl.textContent='🪙 '+money+' kr';
 
  if(!crashed){
