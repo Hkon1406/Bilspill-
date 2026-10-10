@@ -22,7 +22,30 @@ body{margin:0;overflow:hidden;font-family:Arial,sans-serif;background:#91d9ff;co
 #gas{height:80px;background:#188c53df}
 #brake{background:#a83d42df}
 #help{position:fixed;bottom:8px;left:0;right:0;text-align:center;font-size:11px;text-shadow:0 1px 4px #000;pointer-events:none}
-#loading{position:fixed;inset:0;display:grid;place-items:center;background:#102338;color:white;font-size:20px;z-index:5;text-align:center;padding:20px}
+#loading{position:fixed;inset:0;display:grid;place-items:center;background:#102338;color:white;font-size:20px;z-index:20;text-align:center;padding:20px}
+#gameMenu{position:fixed;top:88px;left:14px;display:flex;gap:7px;pointer-events:auto;z-index:4}
+.menuBtn,.actionBtn{border:1px solid #ffffff65;border-radius:11px;background:#081828e8;color:white;padding:10px 12px;font-weight:bold;font-size:13px;box-shadow:0 3px 10px #0003}
+.menuBtn:active,.actionBtn:active{transform:scale(.97);background:#2678a8}
+#coins{font-size:19px;font-weight:800;color:#ffe27a;margin-top:3px}
+#overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#06111dd9;z-index:10;padding:18px}
+#overlayCard{width:min(520px,100%);max-height:85vh;overflow:auto;background:#102338;border:1px solid #ffffff35;border-radius:20px;padding:20px;box-shadow:0 15px 50px #0008}
+#overlayTitle{font-size:25px;font-weight:800;margin-bottom:8px}
+#overlayText{color:#d7e8f4;line-height:1.45;margin-bottom:14px}
+.shopGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.shopCar{border:1px solid #ffffff35;border-radius:13px;padding:12px;background:#ffffff0a}
+.shopCar strong{display:block;margin:7px 0}
+.shopCar p{font-size:12px;color:#c5dfef;min-height:30px;margin:5px 0 10px}
+.shopCar button{width:100%}
+.overlayActions{display:flex;gap:8px;margin-top:14px}
+.overlayActions button{flex:1}
+#missionProgress{font-size:14px;color:#ffe27a;margin:10px 0}
+@media(max-width:600px){
+ #gameMenu{top:78px;left:10px;gap:5px}
+ .menuBtn{padding:8px 9px;font-size:12px}
+ #overlayCard{padding:16px}
+ .shopGrid{grid-template-columns:1fr}
+ #hud{left:10px;right:10px;top:10px}
+}
 @media(max-width:600px){
  .panel{padding:10px 12px}
  #speed{font-size:23px}
@@ -38,9 +61,23 @@ body{margin:0;overflow:hidden;font-family:Arial,sans-serif;background:#91d9ff;co
 <div id="loading">🏎️ Starter motoren …</div>
 <div id="hud">
  <div class="panel"><div style="font-weight:bold">🏁 FRI KJØRING</div><div class="small">3D KJØRESPILL</div></div>
- <div class="panel"><div id="speed">0 km/t</div><div class="small">HASTIGHET</div></div>
+ <div class="panel"><div id="speed">0 km/t</div><div class="small">HASTIGHET</div><div id="coins">🪙 0 kr</div></div>
 </div>
 <div id="message">Trykk på gassen for å kjøre!</div>
+<div id="gameMenu">
+ <button class="menuBtn" id="shopOpen">🚘 Bilbutikk</button>
+ <button class="menuBtn" id="missionsOpen">🎯 Oppdrag</button>
+</div>
+<div id="overlay">
+ <div id="overlayCard">
+  <div id="overlayTitle">Bilbutikk</div>
+  <div id="overlayText">Tjen penger ved å kjøre, samle mynter og fullføre oppdrag. Kjøpte biler blir lagret på denne enheten.</div>
+  <div id="overlayContent"></div>
+  <div class="overlayActions">
+   <button class="actionBtn" id="closeOverlay">Fortsett å kjøre</button>
+  </div>
+ </div>
+</div>
 <div id="controls">
  <div class="group"><button class="control" id="left" aria-label="Sving venstre">◀</button><button class="control" id="right" aria-label="Sving høyre">▶</button></div>
  <div class="group"><button class="control" id="brake" aria-label="Brems">▼</button><button class="control" id="gas" aria-label="Gass">▲</button></div>
@@ -60,7 +97,9 @@ if(!window.THREE){
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x91d9ff);
 scene.fog=new THREE.Fog(0x91d9ff,115,390);
+
 const camera=new THREE.PerspectiveCamera(66,innerWidth/innerHeight,.1,900);
+
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));
 renderer.setSize(innerWidth,innerHeight);
@@ -69,9 +108,11 @@ renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.12;
+
 document.getElementById('game').appendChild(renderer.domElement);
 
 scene.add(new THREE.HemisphereLight(0xe9f6ff,0x627348,2.1));
+
 const sun=new THREE.DirectionalLight(0xfff1d5,2.5);
 sun.position.set(-30,55,18);
 sun.castShadow=true;
@@ -82,7 +123,10 @@ sun.shadow.camera.top=35;
 sun.shadow.camera.bottom=-35;
 scene.add(sun);
 
-const mat=(c,r=.8,m=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m});
+const mat=(c,r=.8,m=0)=>new THREE.MeshStandardMaterial({
+ color:c,roughness:r,metalness:m
+});
+
 const grass=mat(0x67b64e);
 const asphalt=mat(0x343941,.96);
 const white=mat(0xf5f5ee,.7);
@@ -96,51 +140,75 @@ const rubber=mat(0x15171a,1);
 const chrome=mat(0xb8c5ce,.25,.7);
 
 const lampMat=new THREE.MeshStandardMaterial({
- color:0xfff1b4,emissive:0xffcf69,emissiveIntensity:.5
-});
-const tailMat=new THREE.MeshStandardMaterial({
- color:0xf51e28,emissive:0x9c0010,emissiveIntensity:.5
+ color:0xfff1b4,
+ emissive:0xffcf69,
+ emissiveIntensity:.5
 });
 
-// BAKKEN
-const ground=new THREE.Mesh(new THREE.PlaneGeometry(3000,3000),grass);
+const tailMat=new THREE.MeshStandardMaterial({
+ color:0xf51e28,
+ emissive:0x9c0010,
+ emissiveIntensity:.5
+});
+
+// GROUND
+const ground=new THREE.Mesh(
+ new THREE.PlaneGeometry(3000,3000),grass
+);
 ground.rotation.x=-Math.PI/2;
 ground.position.y=-.15;
 ground.receiveShadow=true;
 scene.add(ground);
 
-// FJERNER HILLS
+// DISTANT HILLS
 for(let i=0;i<24;i++){
  const a=i/24*Math.PI*2;
  const rad=145+Math.random()*60;
  const h=12+Math.random()*24;
+
  const hill=new THREE.Mesh(
   new THREE.ConeGeometry(20+Math.random()*18,h,7),
   mat(i%3?0x80b66b:0x7b9c91)
  );
- hill.position.set(Math.sin(a)*rad,h/2-2,-65+Math.cos(a)*rad);
+
+ hill.position.set(
+  Math.sin(a)*rad,
+  h/2-2,
+  -65+Math.cos(a)*rad
+ );
  hill.rotation.y=Math.random()*Math.PI;
  scene.add(hill);
 }
 
-// SKYER
-const cloudMat=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.8});
+// CLOUDS
+const cloudMat=new THREE.MeshBasicMaterial({
+ color:0xffffff,transparent:true,opacity:.8
+});
+
 for(let i=0;i<15;i++){
  const cloud=new THREE.Group();
+
  for(let j=0;j<4;j++){
   const puff=new THREE.Mesh(
-   new THREE.SphereGeometry(2.5+Math.random()*2,10,8),cloudMat
+   new THREE.SphereGeometry(2.5+Math.random()*2,10,8),
+   cloudMat
   );
   puff.position.set(j*3,Math.random()*1.2,Math.random()*2);
   cloud.add(puff);
  }
- cloud.position.set(-100+Math.random()*200,28+Math.random()*13,-70-Math.random()*270);
+
+ cloud.position.set(
+  -100+Math.random()*200,
+  28+Math.random()*13,
+  -70-Math.random()*270
+ );
  scene.add(cloud);
 }
 
-// VEI
+// ROAD
 const roadGroup=new THREE.Group();
 scene.add(roadGroup);
+
 const roadWidth=13;
 const segmentLength=40;
 const segmentCount=40;
@@ -149,55 +217,84 @@ const roadSegments=[];
 
 function makeRoadSegment(i){
  const g=new THREE.Group();
- const road=new THREE.Mesh(new THREE.BoxGeometry(roadWidth,.12,segmentLength),asphalt);
+
+ const road=new THREE.Mesh(
+  new THREE.BoxGeometry(roadWidth,.12,segmentLength),
+  asphalt
+ );
  road.position.y=0;
  road.receiveShadow=true;
  g.add(road);
 
  for(const side of [-1,1]){
-  const shoulder=new THREE.Mesh(new THREE.BoxGeometry(.8,.08,segmentLength),shoulderMat);
+  const shoulder=new THREE.Mesh(
+   new THREE.BoxGeometry(.8,.08,segmentLength),
+   shoulderMat
+  );
   shoulder.position.set(side*(roadWidth/2+.4),-.025,0);
   g.add(shoulder);
 
-  const edge=new THREE.Mesh(new THREE.BoxGeometry(.16,.035,segmentLength),white);
+  const edge=new THREE.Mesh(
+   new THREE.BoxGeometry(.16,.035,segmentLength),
+   white
+  );
   edge.position.set(side*(roadWidth/2-.12),.08,0);
   g.add(edge);
  }
 
  for(let z=-segmentLength/2+3;z<segmentLength/2;z+=10){
-  const dash=new THREE.Mesh(new THREE.BoxGeometry(.17,.04,4.4),white);
+  const dash=new THREE.Mesh(
+   new THREE.BoxGeometry(.17,.04,4.4),
+   white
+  );
   dash.position.set(0,.085,z);
   g.add(dash);
  }
+
  g.position.z=-i*segmentLength-segmentLength/2;
  roadGroup.add(g);
  roadSegments.push(g);
 }
+
 for(let i=0;i<segmentCount;i++)makeRoadSegment(i);
 
-// TRÆR OG BUSKER
+// TREES AND SHRUBS
 const roadside=[];
 const trees=[];
 const shrubs=[];
-const treeMats=[mat(0x236c37),mat(0x2f8241),mat(0x347c3a)];
+
+const treeMats=[
+ mat(0x236c37),
+ mat(0x2f8241),
+ mat(0x347c3a)
+];
 
 function makeTree(x,z,scale=1){
  const g=new THREE.Group();
- const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.13,.22,1.45,8),trunkMat);
+
+ const trunk=new THREE.Mesh(
+  new THREE.CylinderGeometry(.13,.22,1.45,8),
+  trunkMat
+ );
  trunk.position.y=.72;
  trunk.castShadow=true;
  g.add(trunk);
 
  for(let i=0;i<3;i++){
-  const crown=new THREE.Mesh(new THREE.ConeGeometry(1.15-i*.2,1.9,8),treeMats[i]);
+  const crown=new THREE.Mesh(
+   new THREE.ConeGeometry(1.15-i*.2,1.9,8),
+   treeMats[i]
+  );
   crown.position.y=1.65+i*.78;
   crown.castShadow=true;
   g.add(crown);
  }
+
  g.scale.setScalar(scale);
  g.position.set(x,0,z);
  g.userData.isTree=true;
  g.userData.treeRadius=1.15*scale;
+
  scene.add(g);
  roadside.push(g);
  trees.push(g);
@@ -209,22 +306,33 @@ for(let z=-12;z>-totalRoadLength;z-=13){
 }
 
 const shrubMat=mat(0x3f8b42);
+
 for(let i=0;i<100;i++){
  const side=Math.random()<.5?-1:1;
+
  const shrub=new THREE.Mesh(
-  new THREE.DodecahedronGeometry(.35+Math.random()*.45,0),shrubMat
+  new THREE.DodecahedronGeometry(.35+Math.random()*.45,0),
+  shrubMat
  );
- shrub.position.set(side*(8+Math.random()*18),.2,-Math.random()*totalRoadLength);
+
+ shrub.position.set(
+  side*(8+Math.random()*18),
+  .2,
+  -Math.random()*totalRoadLength
+ );
+
  shrub.castShadow=true;
  shrub.userData.isTree=false;
+
  scene.add(shrub);
  roadside.push(shrub);
  shrubs.push(shrub);
 }
 
-// SPILLERBIL
+// CAR
 const car=new THREE.Group();
 scene.add(car);
+
 function part(geo,material,x,y,z){
  const mesh=new THREE.Mesh(geo,material);
  mesh.position.set(x,y,z);
@@ -234,6 +342,7 @@ function part(geo,material,x,y,z){
  return mesh;
 }
 
+// Body
 part(new THREE.BoxGeometry(2.15,.38,4.3),red,0,.76,0);
 part(new THREE.BoxGeometry(2.02,.2,3.8),redDark,0,.57,0);
 part(new THREE.BoxGeometry(1.95,.15,1.3),red,0,.98,1.35);
@@ -241,7 +350,7 @@ part(new THREE.BoxGeometry(1.95,.16,.14),chrome,0,.57,2.13);
 part(new THREE.BoxGeometry(1.95,.16,.14),dark,0,.57,-2.13);
 part(new THREE.BoxGeometry(.75,.16,.07),dark,0,.69,2.16);
 
-// TAK OG VINDUER
+// Cabin and windows
 part(new THREE.BoxGeometry(1.55,.48,1.85),red,0,1.12,-.25);
 part(new THREE.BoxGeometry(1.34,.34,.045),glass,0,1.2,.69);
 part(new THREE.BoxGeometry(1.30,.32,.045),glass,0,1.2,-1.19);
@@ -249,68 +358,91 @@ part(new THREE.BoxGeometry(.045,.31,.7),glass,-.79,1.17,-.25);
 part(new THREE.BoxGeometry(.045,.31,.7),glass,.79,1.17,-.25);
 part(new THREE.BoxGeometry(1.39,.1,1.1),red,0,1.39,-.27);
 
+// Side skirts
 for(const x of [-1.03,1.03]){
  part(new THREE.BoxGeometry(.12,.18,2.7),dark,x,.55,0);
 }
 
+// Lights
 for(const x of [-.7,.7]){
  part(new THREE.BoxGeometry(.42,.13,.07),lampMat,x,.84,2.17);
  part(new THREE.BoxGeometry(.38,.13,.07),tailMat,x,.84,-2.17);
  part(new THREE.BoxGeometry(.2,.12,.25),red,x*1.45,1.1,.35);
 }
 
+// Rear spoiler
 part(new THREE.BoxGeometry(.12,.28,.12),dark,-.65,1.02,-1.85);
 part(new THREE.BoxGeometry(.12,.28,.12),dark,.65,1.02,-1.85);
 part(new THREE.BoxGeometry(2.05,.12,.38),redDark,0,1.19,-1.91);
 
-// HJUL
+// Wheels
 const wheels=[];
+
 for(const x of [-1,1]){
  for(const z of [-1.38,1.38]){
   const wg=new THREE.Group();
   wg.position.set(x*1.04,.48,z);
   car.add(wg);
 
-  const tyre=new THREE.Mesh(new THREE.CylinderGeometry(.4,.4,.27,24),rubber);
+  const tyre=new THREE.Mesh(
+   new THREE.CylinderGeometry(.4,.4,.27,24),
+   rubber
+  );
   tyre.rotation.z=Math.PI/2;
   tyre.castShadow=true;
   wg.add(tyre);
 
-  const rim=new THREE.Mesh(new THREE.CylinderGeometry(.245,.245,.285,20),chrome);
+  const rim=new THREE.Mesh(
+   new THREE.CylinderGeometry(.245,.245,.285,20),
+   chrome
+  );
   rim.rotation.z=Math.PI/2;
   wg.add(rim);
 
-  const hub=new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,.3,16),dark);
+  const hub=new THREE.Mesh(
+   new THREE.CylinderGeometry(.09,.09,.3,16),
+   dark
+  );
   hub.rotation.z=Math.PI/2;
   wg.add(hub);
 
   for(let i=0;i<5;i++){
-   const spoke=new THREE.Mesh(new THREE.BoxGeometry(.035,.35,.045),chrome);
+   const spoke=new THREE.Mesh(
+    new THREE.BoxGeometry(.035,.35,.045),
+    chrome
+   );
    spoke.position.y=Math.cos(i*Math.PI*2/5)*.12;
    spoke.position.z=Math.sin(i*Math.PI*2/5)*.12;
    wg.add(spoke);
   }
+
   wheels.push(wg);
  }
 }
 
+// Car shadow
 const shadow=new THREE.Mesh(
  new THREE.CircleGeometry(1.7,24),
- new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.16})
+ new THREE.MeshBasicMaterial({
+  color:0x000000,
+  transparent:true,
+  opacity:.16
+ })
 );
 shadow.rotation.x=-Math.PI/2;
 shadow.scale.set(1,1.7,1);
 shadow.position.y=.015;
 car.add(shadow);
 
-// Bilen vender fremover
+// Face forward
 car.rotation.y=Math.PI;
 car.position.set(3.1,0,4);
 
-// EKSPLOSJON
+// EXPLOSION EFFECT
 const explosion=new THREE.Group();
 scene.add(explosion);
 explosion.visible=false;
+
 const explosionParticles=[];
 const particleMaterials=[
  new THREE.MeshBasicMaterial({color:0xff3b12,transparent:true,opacity:1}),
@@ -324,11 +456,19 @@ for(let i=0;i<48;i++){
  const isSmoke=i>=30;
  const material=particleMaterials[isSmoke?3+Math.floor(Math.random()*2):Math.floor(Math.random()*3)];
  const size=isSmoke?.35+Math.random()*.45:.12+Math.random()*.24;
- const particle=new THREE.Mesh(new THREE.SphereGeometry(size,8,7),material.clone());
+ const particle=new THREE.Mesh(
+  new THREE.SphereGeometry(size,8,7),
+  material.clone()
+ );
  particle.visible=false;
  explosion.add(particle);
  explosionParticles.push({
-  mesh:particle,velocity:new THREE.Vector3(),life:0,maxLife:1,startScale:1,smoke:isSmoke
+  mesh:particle,
+  velocity:new THREE.Vector3(),
+  life:0,
+  maxLife:1,
+  startScale:1,
+  smoke:isSmoke
  });
 }
 
@@ -347,8 +487,16 @@ function startExplosion(){
 
  for(const p of explosionParticles){
   p.mesh.visible=true;
-  p.mesh.position.set((Math.random()-.5)*1.2,(Math.random()-.5)*.8,(Math.random()-.5)*1.5);
-  const dir=new THREE.Vector3((Math.random()-.5)*2.2,Math.random()*1.8+.25,(Math.random()-.5)*2.2).normalize();
+  p.mesh.position.set(
+   (Math.random()-.5)*1.2,
+   (Math.random()-.5)*.8,
+   (Math.random()-.5)*1.5
+  );
+  const dir=new THREE.Vector3(
+   (Math.random()-.5)*2.2,
+   Math.random()*1.8+.25,
+   (Math.random()-.5)*2.2
+  ).normalize();
   const power=p.smoke?2+Math.random()*2:5+Math.random()*8;
   p.velocity.copy(dir.multiplyScalar(power));
   p.life=0;
@@ -371,13 +519,21 @@ function updateExplosion(dt){
   }
   p.life+=dt;
   p.mesh.position.addScaledVector(p.velocity,dt);
-  p.velocity.y-=p.smoke?-.8:8*dt;
-  if(p.smoke)p.velocity.multiplyScalar(1-dt*.35);
+  if(p.smoke){
+   p.velocity.y+=.8*dt;
+   p.velocity.multiplyScalar(1-dt*.35);
+  }else{
+   p.velocity.y-=8*dt;
+  }
   const t=Math.min(p.life/p.maxLife,1);
-  if(p.smoke)p.mesh.scale.setScalar(p.startScale*(1+t*1.7));
-  else p.mesh.scale.setScalar(p.startScale*(1-t*.8));
+  if(p.smoke){
+   p.mesh.scale.setScalar(p.startScale*(1+t*1.7));
+  }else{
+   p.mesh.scale.setScalar(p.startScale*(1-t*.8));
+  }
   p.mesh.material.opacity=(p.smoke?.8:1)*(1-t);
  }
+
  if(explosionTime>=2){
   explosionActive=false;
   explosion.visible=false;
@@ -391,15 +547,14 @@ const trafficColors=[0x2878d0,0xf0c52d];
 function makeTrafficCar(index,direction){
  const trafficCar=car.clone(true);
  trafficCar.position.set(direction==='same'?3.1:-3.1,0,direction==='same'?-95:-165);
- // Bilmodellen snus slik at den peker i riktig kjøreretning.
+ // Modellen ser motsatt vei av kjøreretningen i den opprinnelige spillerbilen.
  trafficCar.rotation.y=direction==='same'?0:Math.PI;
  trafficCar.scale.setScalar(.94);
  trafficCar.userData.direction=direction;
  trafficCar.userData.trafficSpeed=direction==='same'?58:72;
  trafficCar.userData.startZ=trafficCar.position.z;
-
  trafficCar.traverse(obj=>{
-  if(!obj.isMesh || !obj.material)return;
+  if(!obj.isMesh || !obj.material) return;
   const original=obj.material;
   obj.material=original.clone();
   if(original===red || original===redDark){
@@ -411,8 +566,177 @@ function makeTrafficCar(index,direction){
  scene.add(trafficCar);
  trafficCars.push(trafficCar);
 }
+
 makeTrafficCar(0,'same');
 makeTrafficCar(1,'opposite');
+
+// PENGER, BILBUTIKK OG OPPDRAG
+const moneyEl=document.getElementById('coins');
+const overlay=document.getElementById('overlay');
+const overlayTitle=document.getElementById('overlayTitle');
+const overlayText=document.getElementById('overlayText');
+const overlayContent=document.getElementById('overlayContent');
+const carsForSale=[
+  {name:'Gammel småbil',price:0,color:0x66808a,maxSpeed:165,scale:[.88,.88,.88],description:'Startbilen. Litt treg, men helt gratis.'},
+  {name:'Bybil Sport',price:150,color:0x28a9a1,maxSpeed:180,scale:[.93,.91,.94],description:'Et lite steg opp fra startbilen.'},
+  {name:'Original sportsbil',price:350,color:0xd8202e,maxSpeed:250,scale:[1,1,1],description:'Den originale røde sportsbilen.'},
+  {name:'Gullraketten',price:850,color:0xf0c52d,maxSpeed:325,scale:[1.02,1,1.04],description:'Raskere bil med ekstra sportslig stil.'},
+  {name:'SUPERCAR X',price:1800,color:0x9b59d0,maxSpeed:500,scale:[1.08,1.03,1.08],description:'Den raskeste bilen i butikken – hele 500 km/t!'}
+];
+let money=Number(localStorage.getItem('friKjoringMoney')||0);
+let ownedCars=JSON.parse(localStorage.getItem('friKjoringOwnedCars')||'[0]');
+let selectedCar=Number(localStorage.getItem('friKjoringSelectedCar')||0);
+if(!Array.isArray(ownedCars))ownedCars=[0];
+if(!ownedCars.includes(0))ownedCars.unshift(0);
+if(!carsForSale[selectedCar]||!ownedCars.includes(selectedCar))selectedCar=0;
+let distanceMeters=0;
+let drivingSeconds=0;
+let coinsCollected=0;
+let missionClaimed={};
+const missions=[
+ {id:'distance',title:'Langtur',description:'Kjør 1 km.',goal:1000,reward:150,unit:'m'},
+ {id:'coins',title:'Myntsamler',description:'Samle 8 mynter.',goal:8,reward:120,unit:'mynter'},
+ {id:'time',title:'Hold det gående',description:'Kjør i 45 sekunder totalt.',goal:45,reward:100,unit:'sek'}
+];
+let missionProgress={distance:0,coins:0,time:0};
+
+function saveEconomy(){
+ localStorage.setItem('friKjoringMoney',String(money));
+ localStorage.setItem('friKjoringOwnedCars',JSON.stringify(ownedCars));
+ localStorage.setItem('friKjoringSelectedCar',String(selectedCar));
+ moneyEl.textContent='🪙 '+money+' kr';
+}
+function paintPlayerCar(){
+ const chosen=carsForSale[selectedCar]||carsForSale[0];
+ const shape=chosen.scale||[1,1,1];
+ car.scale.set(shape[0],shape[1],shape[2]);
+
+ car.traverse(obj=>{
+  if(!obj.isMesh||!obj.material)return;
+  if(obj.material===red||obj.material===redDark){
+   obj.material.color.setHex(chosen.color);
+  }
+ });
+
+ // Enkle visuelle detaljer gjør bilene lettere å skille fra hverandre.
+ if(car.userData.carDetails){
+  car.userData.carDetails.forEach(obj=>car.remove(obj));
+ }
+ car.userData.carDetails=[];
+
+ const detailMat=new THREE.MeshStandardMaterial({
+  color:selectedCar===0?0x26333a:
+        selectedCar===1?0x991622:
+        selectedCar===2?0x282828:0xf4f0ff,
+  roughness:.45,
+  metalness:.18
+ });
+
+ if(selectedCar===0){
+  // Startbilen får en enkel, litt eldre takdetalj.
+  const roofBar=new THREE.Mesh(new THREE.BoxGeometry(1.05,.07,.09),dark);
+  roofBar.position.set(0,1.47,-.25);
+  car.add(roofBar);
+  car.userData.carDetails.push(roofBar);
+ }else if(selectedCar>=2){
+  // Sportsbilene får doble striper på panseret.
+  for(const x of [-.27,.27]){
+   const stripe=new THREE.Mesh(new THREE.BoxGeometry(.12,.025,.8),detailMat);
+   stripe.position.set(x,1.065,1.38);
+   car.add(stripe);
+   car.userData.carDetails.push(stripe);
+  }
+ }
+}
+function selectCar(index){
+ if(!ownedCars.includes(index))return;
+ selectedCar=index;
+ localStorage.setItem('friKjoringSelectedCar',String(index));
+ paintPlayerCar();
+ renderShop();
+}
+function renderShop(){
+ overlayTitle.textContent='🚘 Bilbutikk';
+ overlayText.textContent='Pengene dine: '+money+' kr. Kjør langt, samle mynter og fullfør oppdrag for å tjene mer.';
+ overlayContent.innerHTML='<div class="shopGrid">'+carsForSale.map((c,i)=>{
+  const owned=ownedCars.includes(i);
+  const selected=selectedCar===i;
+  const color='#'+c.color.toString(16).padStart(6,'0');
+  let label=selected?'Valgt bil':owned?'Velg bilen':'Kjøp · '+c.price+' kr';
+  return '<div class="shopCar"><div style="font-size:32px;color:'+color+'">🏎️</div><strong>'+c.name+'</strong><div class="small">Toppfart: '+c.maxSpeed+' km/t</div><p>'+c.description+'</p><button class="actionBtn" data-car="'+i+'">'+label+'</button></div>';
+ }).join('')+'</div>';
+ overlayContent.querySelectorAll('[data-car]').forEach(btn=>btn.addEventListener('click',()=>{
+  const i=Number(btn.dataset.car);
+  if(ownedCars.includes(i)){selectCar(i);return;}
+  if(money>=carsForSale[i].price){
+   money-=carsForSale[i].price;
+   ownedCars.push(i);
+   saveEconomy();
+   selectCar(i);
+   renderShop();
+  }else{
+   overlayText.textContent='Du mangler '+(carsForSale[i].price-money)+' kr. Kjør videre eller fullfør oppdrag!';
+  }
+ }));
+}
+function missionValue(m){
+ if(m.id==='distance')return Math.floor(distanceMeters);
+ if(m.id==='coins')return coinsCollected;
+ return Math.floor(drivingSeconds);
+}
+function renderMissions(){
+ overlayTitle.textContent='🎯 Oppdrag';
+ overlayText.textContent='Fullfør oppdrag for å få ekstra penger. Belønningen kan hentes én gang per oppdrag.';
+ overlayContent.innerHTML=missions.map(m=>{
+  const value=missionValue(m);
+  const done=value>=m.goal;
+  const claimed=!!missionClaimed[m.id];
+  const shown=m.id==='distance'?(Math.min(value,m.goal)+' / '+m.goal+' m'):
+   m.id==='time'?(Math.min(value,m.goal)+' / '+m.goal+' sek'):(Math.min(value,m.goal)+' / '+m.goal+' mynter');
+  return '<div class="shopCar" style="margin-bottom:9px"><strong>'+m.title+'</strong><div>'+m.description+'</div><div id="missionProgress">'+shown+'</div><button class="actionBtn" data-mission="'+m.id+'" '+(!done||claimed?'disabled':'')+'>'+ (claimed?'Hentet ✓':done?'Hent '+m.reward+' kr':'Ikke fullført ennå')+'</button></div>';
+ }).join('');
+ overlayContent.querySelectorAll('[data-mission]').forEach(btn=>btn.addEventListener('click',()=>{
+  const id=btn.dataset.mission;
+  const m=missions.find(x=>x.id===id);
+  if(m&&missionValue(m)>=m.goal&&!missionClaimed[id]){
+   missionClaimed[id]=true;
+   money+=m.reward;
+   saveEconomy();
+   renderMissions();
+  }
+ }));
+}
+function openShop(){renderShop();overlay.style.display='flex';resetKeys();}
+function openMissions(){renderMissions();overlay.style.display='flex';resetKeys();}
+document.getElementById('shopOpen').addEventListener('click',openShop);
+document.getElementById('missionsOpen').addEventListener('click',openMissions);
+document.getElementById('closeOverlay').addEventListener('click',()=>overlay.style.display='none');
+
+// Mynter ligger langs veien og flyttes mot spilleren.
+const roadCoins=[];
+const coinMaterial=new THREE.MeshStandardMaterial({color:0xffd22e,metalness:.72,roughness:.25,emissive:0x805400,emissiveIntensity:.18});
+function makeRoadCoin(z,i){
+ const coin=new THREE.Mesh(new THREE.TorusGeometry(.42,.14,8,16),coinMaterial);
+ coin.position.set(i%2===0?-3.1:3.1,.95,z);
+ coin.rotation.x=Math.PI/2;
+ coin.castShadow=true;
+ coin.userData.baseX=coin.position.x;
+ coin.userData.laneX=i%2===0?-3.1:3.1;
+ scene.add(coin);
+ roadCoins.push(coin);
+}
+const coinCount=8;
+const coinSpacing=58;
+for(let i=0;i<coinCount;i++)makeRoadCoin(-45-i*coinSpacing,i);
+function resetCoins(){
+ roadCoins.forEach((coin,i)=>{
+  coin.position.set(coin.userData.laneX,.95,-45-i*coinSpacing);
+  coin.visible=true;
+ });
+}
+saveEconomy();
+paintPlayerCar();
+
 
 function resetTraffic(){
  for(const t of trafficCars){
@@ -421,26 +745,34 @@ function resetTraffic(){
  }
 }
 
-// KONTROLLER
+// CONTROLS
 let speed=0;
 let carX=3.1;
 let steer=0;
 let crashed=false;
 
-const keys={left:false,right:false,gas:false,brake:false};
+const keys={
+ left:false,
+ right:false,
+ gas:false,
+ brake:false
+};
 
 function bind(id,key){
  const el=document.getElementById(id);
+
  const down=e=>{
   e.preventDefault();
   if(crashed)return;
   keys[key]=true;
   try{el.setPointerCapture(e.pointerId)}catch(_){}
  };
+
  const up=e=>{
   e.preventDefault();
   keys[key]=false;
  };
+
  el.addEventListener('pointerdown',down);
  el.addEventListener('pointerup',up);
  el.addEventListener('pointercancel',up);
@@ -466,6 +798,7 @@ function restartGame(){
  car.rotation.set(0,Math.PI,0);
  resetKeys();
 
+ // Put the road, trees and bushes back at their starting positions.
  for(let i=0;i<roadSegments.length;i++){
   roadSegments[i].position.z=-i*segmentLength-segmentLength/2;
  }
@@ -473,6 +806,7 @@ function restartGame(){
   object.position.z=object.userData.originalZ;
  }
  resetTraffic();
+ resetCoins();
  explosionActive=false;
  explosion.visible=false;
  explosionTime=0;
@@ -490,8 +824,13 @@ document.addEventListener('visibilitychange',()=>{
 
 addEventListener('keydown',e=>{
  const k=e.key.toLowerCase();
- if(['arrowleft','arrowright','arrowup','arrowdown',' '].includes(k))e.preventDefault();
+
+ if(['arrowleft','arrowright','arrowup','arrowdown',' '].includes(k)){
+  e.preventDefault();
+ }
+
  if(crashed)return;
+
  if(['arrowleft','a'].includes(k))keys.left=true;
  if(['arrowright','d'].includes(k))keys.right=true;
  if(['arrowup','w'].includes(k))keys.gas=true;
@@ -500,71 +839,137 @@ addEventListener('keydown',e=>{
 
 addEventListener('keyup',e=>{
  const k=e.key.toLowerCase();
+
+ if(['arrowleft','arrowright','arrowup','arrowdown',' '].includes(k)){
+  e.preventDefault();
+ }
+
  if(['arrowleft','a'].includes(k))keys.left=false;
  if(['arrowright','d'].includes(k))keys.right=false;
  if(['arrowup','w'].includes(k))keys.gas=false;
  if(['arrowdown','s'].includes(k))keys.brake=false;
 });
 
-// LAGRE OPPRINNELIGE POSISJONER
+// Remember original positions so a restart resets the scene cleanly.
 for(const object of roadside){
  object.userData.originalZ=object.position.z;
 }
 
-// KAMERA
+// CAMERA
 camera.position.set(0,5.7,12.5);
 camera.lookAt(0,1,-8);
+
 const clock=new THREE.Clock();
 
 function animate(){
  requestAnimationFrame(animate);
+
  const dt=Math.min(clock.getDelta(),.035);
  updateExplosion(dt);
 
  if(crashed){
   speed=0;
   restartTimer-=dt;
-  if(restartTimer<=0)restartGame();
+  if(restartTimer<=0){
+   restartGame();
+  }
+  renderer.render(scene,camera);
+  return;
+ }
+ if(overlay.style.display==='flex'){
   renderer.render(scene,camera);
   return;
  }
 
- if(keys.gas)speed=Math.min(speed+42*dt,250);
- else speed=Math.max(speed-4.5*dt,0);
- if(keys.brake)speed=Math.max(speed-65*dt,0);
+ // Acceleration and braking
+ if(keys.gas){
+  speed=Math.min(speed+42*dt,carsForSale[selectedCar].maxSpeed);
+ }else{
+  speed=Math.max(speed-4.5*dt,0);
+ }
 
+ if(keys.brake){
+  speed=Math.max(speed-65*dt,0);
+ }
+
+ // Steering: can drive off the road onto the grass.
  steer=(keys.right?1:0)-(keys.left?1:0);
+
  const steeringPower=.85+Math.min(speed/100,1)*.45;
  carX+=steer*steeringPower*dt*(.9+speed*.026);
  carX=Math.max(-27,Math.min(27,carX));
- car.position.x=THREE.MathUtils.damp(car.position.x,carX,10,dt);
- car.rotation.z=THREE.MathUtils.damp(car.rotation.z,-steer*.055*Math.min(speed/50,1),7,dt);
 
- for(const wheel of wheels)wheel.rotation.x-=speed*dt*.045;
+ car.position.x=THREE.MathUtils.damp(
+  car.position.x,carX,10,dt
+ );
 
- // FLYTT VEIEN
+ car.rotation.z=THREE.MathUtils.damp(
+  car.rotation.z,
+  -steer*.055*Math.min(speed/50,1),
+  7,
+  dt
+ );
+
+ for(const wheel of wheels){
+  wheel.rotation.x-=speed*dt*.045;
+ }
+
+ // Move road segments
  const movement=speed*dt*.72;
+
  for(const segment of roadSegments){
   segment.position.z+=movement;
-  if(segment.position.z>segmentLength/2)segment.position.z-=totalRoadLength;
+
+  if(segment.position.z>segmentLength/2){
+   segment.position.z-=totalRoadLength;
+  }
  }
 
- // FLYTT TRÆR OG BUSKER
+ // Move trees and shrubs
  for(const object of roadside){
   object.position.z+=movement;
-  if(object.position.z>15)object.position.z-=totalRoadLength;
+
+  if(object.position.z>15){
+   object.position.z-=totalRoadLength;
+  }
  }
 
- // TRAFIKK: høyre felt samme retning, venstre felt motsatt retning.
+ // Flytt trafikken: høyre felt kjører samme vei, venstre felt møter spilleren.
  for(const t of trafficCars){
   const relativeSpeed=t.userData.direction==='same'
    ? speed-t.userData.trafficSpeed
    : speed+t.userData.trafficSpeed;
   t.position.z+=relativeSpeed*dt*.72;
-  if(t.position.z>18)t.position.z=-155-Math.random()*75;
+  if(t.position.z>18){
+   t.position.z=-155-Math.random()*75;
+  }
  }
 
- // KOLLISJON MED TRÆR — midtlinjen gir IKKE krasj.
+ // Mynter følger veien mot spilleren og kan samles opp.
+ for(const coin of roadCoins){
+  coin.position.z+=movement;
+  coin.rotation.z+=dt*2.8;
+  if(coin.position.z>14){
+   coin.position.z=-45-(coinCount-1)*coinSpacing-Math.random()*coinSpacing;
+   coin.position.x=coin.userData.laneX;
+  }
+  if(coin.visible && Math.abs(coin.position.z-car.position.z)<3.1 &&
+     Math.abs(coin.position.x-car.position.x)<1.35){
+   coin.visible=false;
+   money+=10;
+   coinsCollected++;
+   missionProgress.coins=coinsCollected;
+   saveEconomy();
+  }
+ }
+ if(speed>0){
+  distanceMeters+=speed*dt/3.6;
+  drivingSeconds+=dt;
+  missionProgress.distance=distanceMeters;
+  missionProgress.time=drivingSeconds;
+ }
+
+ // TREE COLLISION
  if(!crashed){
   for(const tree of trees){
    const dx=tree.position.x-car.position.x;
@@ -584,7 +989,7 @@ function animate(){
   }
  }
 
- // KOLLISJON MED TRAFIKKBILENE
+ // Kollisjon med trafikkbilene.
  if(!crashed){
   for(const t of trafficCars){
    const dx=Math.abs(t.position.x-car.position.x);
@@ -602,15 +1007,29 @@ function animate(){
   }
  }
 
- // KAMERA FØLGER BILEN
- const desiredCamera=new THREE.Vector3(car.position.x*.42,5.7,12.5);
- camera.position.lerp(desiredCamera,1-Math.exp(-3.2*dt));
+ // Camera follows the car
+ const desiredCamera=new THREE.Vector3(
+  car.position.x*.42,
+  5.7,
+  12.5
+ );
+
+ camera.position.lerp(
+  desiredCamera,
+  1-Math.exp(-3.2*dt)
+ );
+
  camera.lookAt(car.position.x*.25,.95,-9);
- document.getElementById('speed').textContent=Math.round(speed)+' km/t';
+
+ document.getElementById('speed').textContent=
+  Math.round(speed)+' km/t';
+ moneyEl.textContent='🪙 '+money+' kr';
 
  if(!crashed){
-  document.getElementById('message').style.opacity=speed>5?'0':'1';
+  document.getElementById('message').style.opacity=
+   speed>5?'0':'1';
  }
+
  renderer.render(scene,camera);
 }
 
