@@ -90,7 +90,7 @@ body{margin:0;overflow:hidden;font-family:Arial,sans-serif;background:#91d9ff;co
 <div id="overlay">
  <div id="overlayCard">
   <div id="overlayTitle">Bilbutikk</div>
-  <div id="overlayText">Tjen penger ved å kjøre, samle mynter og fullføre oppdrag. Kjøpte biler blir lagret på denne enheten.</div>
+  <div id="overlayText"></div>
   <div id="overlayContent"></div>
   <div class="overlayActions">
    <button class="actionBtn" id="closeOverlay">Fortsett å kjøre</button>
@@ -111,24 +111,21 @@ body{margin:0;overflow:hidden;font-family:Arial,sans-serif;background:#91d9ff;co
 
 <div id="help">Mobil: hold inne knappene · PC: piltaster eller WASD</div>
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-<script>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
+
 (function(){
 const loading=document.getElementById('loading');
-
-if(!window.THREE){
- loading.textContent='Kunne ikke laste 3D-motoren. Sjekk internettforbindelsen og last siden på nytt.';
- return;
-}
-
 let realisticWorld=localStorage.getItem('friKjoringWorldStyle')==='realistic';
+let externalCarModel=null;
+let externalModelLoaded=false;
 
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x91d9ff);
 scene.fog=new THREE.Fog(0x91d9ff,115,390);
 
 const camera=new THREE.PerspectiveCamera(66,innerWidth/innerHeight,.1,900);
-
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));
 renderer.setSize(innerWidth,innerHeight);
@@ -153,7 +150,6 @@ sun.shadow.camera.bottom=-35;
 scene.add(sun);
 
 const mat=(c,r=.8,m=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m});
-
 const grass=mat(0x67b64e);
 const asphalt=mat(0x343941,.96);
 const white=mat(0xf5f5ee,.7);
@@ -165,28 +161,48 @@ const glass=mat(0x72b8d3,.22,.15);
 const dark=mat(0x171c23,.9);
 const rubber=mat(0x15171a,1);
 const chrome=mat(0xb8c5ce,.25,.7);
+const lampMat=new THREE.MeshStandardMaterial({color:0xfff1b4,emissive:0xffcf69,emissiveIntensity:.5});
+const tailMat=new THREE.MeshStandardMaterial({color:0xf51e28,emissive:0x9c0010,emissiveIntensity:.5});
 
-const lampMat=new THREE.MeshStandardMaterial({
- color:0xfff1b4,emissive:0xffcf69,emissiveIntensity:.5
-});
-const tailMat=new THREE.MeshStandardMaterial({
- color:0xf51e28,emissive:0x9c0010,emissiveIntensity:.5
-});
+/* Teksturer som gir realistisk modus mer detaljerte overflater */
+function makeNoiseTexture(base,variation,count){
+ const canvas=document.createElement('canvas');
+ canvas.width=canvas.height=512;
+ const ctx=canvas.getContext('2d');
+ ctx.fillStyle=base;
+ ctx.fillRect(0,0,512,512);
+ for(let i=0;i<count;i++){
+  const v=Math.floor(Math.random()*variation);
+  const c=40+v;
+  ctx.fillStyle=`rgba(${c},${c},${c},${Math.random()*.23})`;
+  const s=Math.random()*2+1;
+  ctx.fillRect(Math.random()*512,Math.random()*512,s,s);
+ }
+ const tex=new THREE.CanvasTexture(canvas);
+ tex.wrapS=tex.wrapT=THREE.RepeatWrapping;
+ tex.colorSpace=THREE.SRGBColorSpace;
+ tex.anisotropy=4;
+ return tex;
+}
+const grassTexture=makeNoiseTexture('#527e40',90,8500);
+grassTexture.repeat.set(85,85);
+const asphaltTexture=makeNoiseTexture('#292c30',100,14000);
+asphaltTexture.repeat.set(2,10);
 
-// BAKKEN
+/* BAKKEN */
 const ground=new THREE.Mesh(new THREE.PlaneGeometry(3000,3000),grass);
 ground.rotation.x=-Math.PI/2;
 ground.position.y=-.15;
 ground.receiveShadow=true;
 scene.add(ground);
 
-// FJELL
+/* FJELL */
 for(let i=0;i<24;i++){
  const a=i/24*Math.PI*2;
  const rad=145+Math.random()*60;
  const h=12+Math.random()*24;
  const hill=new THREE.Mesh(
-  new THREE.ConeGeometry(20+Math.random()*18,h,7),
+  new THREE.ConeGeometry(20+Math.random()*18,h,realisticWorld?12:7),
   mat(i%3?0x80b66b:0x7b9c91)
  );
  hill.position.set(Math.sin(a)*rad,h/2-2,-65+Math.cos(a)*rad);
@@ -194,14 +210,12 @@ for(let i=0;i<24;i++){
  scene.add(hill);
 }
 
-// SKYER
+/* SKYER */
 const cloudMat=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.8});
 for(let i=0;i<15;i++){
  const cloud=new THREE.Group();
  for(let j=0;j<4;j++){
-  const puff=new THREE.Mesh(
-   new THREE.SphereGeometry(2.5+Math.random()*2,10,8),cloudMat
-  );
+  const puff=new THREE.Mesh(new THREE.SphereGeometry(2.5+Math.random()*2,10,8),cloudMat);
   puff.position.set(j*3,Math.random()*1.2,Math.random()*2);
   cloud.add(puff);
  }
@@ -209,7 +223,7 @@ for(let i=0;i<15;i++){
  scene.add(cloud);
 }
 
-// VEI
+/* VEI */
 const roadGroup=new THREE.Group();
 scene.add(roadGroup);
 const roadWidth=13,segmentLength=40,segmentCount=40;
@@ -219,10 +233,8 @@ const roadSegments=[];
 function makeRoadSegment(i){
  const g=new THREE.Group();
  const road=new THREE.Mesh(new THREE.BoxGeometry(roadWidth,.12,segmentLength),asphalt);
- road.position.y=0;
  road.receiveShadow=true;
  g.add(road);
-
  for(const side of [-1,1]){
   const shoulder=new THREE.Mesh(new THREE.BoxGeometry(.8,.08,segmentLength),shoulderMat);
   shoulder.position.set(side*(roadWidth/2+.4),-.025,0);
@@ -242,7 +254,7 @@ function makeRoadSegment(i){
 }
 for(let i=0;i<segmentCount;i++)makeRoadSegment(i);
 
-// TRÆR OG BUSKER
+/* TRÆR OG BUSKER */
 const roadside=[],trees=[],shrubs=[];
 const treeMats=[mat(0x236c37),mat(0x2f8241),mat(0x347c3a)];
 
@@ -270,7 +282,6 @@ for(let z=-12;z>-totalRoadLength;z-=13){
  makeTree(-9-Math.random()*15,z-Math.random()*8,.75+Math.random()*.7);
  makeTree(9+Math.random()*15,z-Math.random()*8,.75+Math.random()*.7);
 }
-
 const shrubMat=mat(0x3f8b42);
 for(let i=0;i<100;i++){
  const side=Math.random()<.5?-1:1;
@@ -283,7 +294,7 @@ for(let i=0;i<100;i++){
  shrubs.push(shrub);
 }
 
-// SPILLERBIL
+/* SPILLERBIL */
 const car=new THREE.Group();
 scene.add(car);
 
@@ -297,34 +308,29 @@ function part(geo,material,x,y,z){
  return mesh;
 }
 
-// Opprinnelig bilmodell – beholdes i vanlig verden
+/* Original Arcade-bil */
 part(new THREE.BoxGeometry(2.15,.38,4.3),red,0,.76,0);
 part(new THREE.BoxGeometry(2.02,.2,3.8),redDark,0,.57,0);
 part(new THREE.BoxGeometry(1.95,.15,1.3),red,0,.98,1.35);
 part(new THREE.BoxGeometry(1.95,.16,.14),chrome,0,.57,2.13);
 part(new THREE.BoxGeometry(1.95,.16,.14),dark,0,.57,-2.13);
 part(new THREE.BoxGeometry(.75,.16,.07),dark,0,.69,2.16);
-
 part(new THREE.BoxGeometry(1.55,.48,1.85),red,0,1.12,-.25);
 part(new THREE.BoxGeometry(1.34,.34,.045),glass,0,1.2,.69);
 part(new THREE.BoxGeometry(1.30,.32,.045),glass,0,1.2,-1.19);
 part(new THREE.BoxGeometry(.045,.31,.7),glass,-.79,1.17,-.25);
 part(new THREE.BoxGeometry(.045,.31,.7),glass,.79,1.17,-.25);
 part(new THREE.BoxGeometry(1.39,.1,1.1),red,0,1.39,-.27);
-
 for(const x of [-1.03,1.03])part(new THREE.BoxGeometry(.12,.18,2.7),dark,x,.55,0);
-
 for(const x of [-.7,.7]){
  part(new THREE.BoxGeometry(.42,.13,.07),lampMat,x,.84,2.17);
  part(new THREE.BoxGeometry(.38,.13,.07),tailMat,x,.84,-2.17);
  part(new THREE.BoxGeometry(.2,.12,.25),red,x*1.45,1.1,.35);
 }
-
 part(new THREE.BoxGeometry(.12,.28,.12),dark,-.65,1.02,-1.85);
 part(new THREE.BoxGeometry(.12,.28,.12),dark,.65,1.02,-1.85);
 part(new THREE.BoxGeometry(2.05,.12,.38),redDark,0,1.19,-1.91);
 
-// HJUL
 const wheels=[];
 for(const x of [-1,1]){
  for(const z of [-1.38,1.38]){
@@ -351,103 +357,121 @@ for(const x of [-1,1]){
  }
 }
 
-// REALISTISK KAROSSERI – glatte, avrundede former
+/* Glatt reserve-karosseri hvis 3D-modellen ikke lastes */
 const realisticBody=new THREE.Group();
 realisticBody.name='realisticBody';
 car.add(realisticBody);
+const smoothPaint=new THREE.MeshStandardMaterial({color:0xd8202e,roughness:.24,metalness:.48});
+const smoothGlass=new THREE.MeshPhysicalMaterial({color:0x163746,roughness:.13,metalness:.25,clearcoat:1,clearcoatRoughness:.1});
+const smoothTrim=mat(0x111820,.3,.55);
+const smoothChrome=mat(0xc6d3dd,.2,.85);
+const smoothLamp=new THREE.MeshStandardMaterial({color:0xffffff,emissive:0xdcefff,emissiveIntensity:1.4});
+const smoothTail=new THREE.MeshStandardMaterial({color:0xff2020,emissive:0xc60000,emissiveIntensity:1});
 
-const smoothPaint=new THREE.MeshStandardMaterial({
- color:0xd8202e,roughness:.24,metalness:.48
-});
-const smoothGlass=new THREE.MeshPhysicalMaterial({
- color:0x163746,roughness:.13,metalness:.25,
- clearcoat:1,clearcoatRoughness:.1
-});
-const smoothTrim=new THREE.MeshStandardMaterial({
- color:0x111820,roughness:.3,metalness:.55
-});
-const smoothChrome=new THREE.MeshStandardMaterial({
- color:0xc6d3dd,roughness:.2,metalness:.85
-});
-const smoothLamp=new THREE.MeshStandardMaterial({
- color:0xffffff,emissive:0xdcefff,emissiveIntensity:1.4
-});
-const smoothTail=new THREE.MeshStandardMaterial({
- color:0xff2020,emissive:0xc60000,emissiveIntensity:1
-});
-
-function smoothSphere(material,x,y,z,sx,sy,sz,segments=32){
- const mesh=new THREE.Mesh(new THREE.SphereGeometry(1,segments,20),material);
+function smoothSphere(material,x,y,z,sx,sy,sz){
+ const mesh=new THREE.Mesh(new THREE.SphereGeometry(1,32,20),material);
  mesh.position.set(x,y,z);
  mesh.scale.set(sx,sy,sz);
  mesh.castShadow=true;
  mesh.receiveShadow=true;
  realisticBody.add(mesh);
- return mesh;
 }
-function smoothBox(material,x,y,z,sx,sy,sz,r=.08){
+function smoothBox(material,x,y,z,sx,sy,sz){
  const mesh=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),material);
  mesh.position.set(x,y,z);
  mesh.castShadow=true;
  mesh.receiveShadow=true;
  realisticBody.add(mesh);
- return mesh;
 }
-
-// Hovedkarosseri, panser og avrundet bakparti
 smoothSphere(smoothPaint,0,.75,0,1.04,.36,2.05);
 smoothSphere(smoothPaint,0,.78,1.12,.94,.25,.93);
 smoothSphere(smoothPaint,0,.77,-1.22,.98,.29,.82);
-
-// Lavt, avrundet tak
 smoothSphere(smoothPaint,0,1.09,-.28,.79,.43,.99);
-
-// Mørke vinduer langs sidene og frontrute
 smoothSphere(smoothGlass,0,1.22,.38,.69,.255,.53);
 smoothSphere(smoothGlass,0,1.22,-.86,.68,.25,.43);
 for(const side of [-1,1]){
- smoothBox(smoothGlass,side*.79,1.15,-.25,.035,.27,.75,.025);
- smoothBox(smoothTrim,side*.91,.57,0,.12,.14,2.55,.04);
- smoothBox(smoothChrome,side*.91,.77,-.15,.035,.045,.25,.015);
+ smoothBox(smoothGlass,side*.79,1.15,-.25,.035,.27,.75);
+ smoothBox(smoothTrim,side*.91,.57,0,.12,.14,2.55);
+ smoothBox(smoothChrome,side*.91,.77,-.15,.035,.045,.25);
 }
-
-// Grill, støtfanger, lys og baklys
-smoothBox(smoothTrim,0,.59,2.015,.76,.19,.07,.035);
-smoothBox(smoothChrome,0,.56,2.06,.5,.035,.025,.01);
+smoothBox(smoothTrim,0,.59,2.015,.76,.19,.07);
+smoothBox(smoothChrome,0,.56,2.06,.5,.035,.025);
 for(const side of [-1,1]){
- smoothBox(smoothLamp,side*.68,.86,1.98,.42,.11,.045,.035);
- smoothBox(smoothTail,side*.69,.83,-1.98,.39,.12,.045,.03);
- smoothBox(smoothTrim,side*.65,.48,2.02,.35,.07,.05,.02);
+ smoothBox(smoothLamp,side*.68,.86,1.98,.42,.11,.045);
+ smoothBox(smoothTail,side*.69,.83,-1.98,.39,.12,.045);
+ smoothBox(smoothTrim,side*.65,.48,2.02,.35,.07,.05);
 }
+smoothBox(smoothTrim,-.59,1.05,-1.73,.09,.23,.09);
+smoothBox(smoothTrim,.59,1.05,-1.73,.09,.23,.09);
+smoothBox(smoothPaint,0,1.17,-1.78,1.72,.09,.29);
+smoothBox(smoothTrim,0,.49,-1.94,1.35,.11,.12);
+smoothBox(smoothTrim,0,1.015,1.28,.23,.025,.48);
+for(const side of [-1,1])smoothBox(smoothChrome,side*.42,.995,1.25,.035,.018,.36);
+realisticBody.visible=false;
 
-// Sportslig spoiler og bakre diffuser
-smoothBox(smoothTrim,-.59,1.05,-1.73,.09,.23,.09,.025);
-smoothBox(smoothTrim,.59,1.05,-1.73,.09,.23,.09,.025);
-smoothBox(smoothPaint,0,1.17,-1.78,1.72,.09,.29,.05);
-smoothBox(smoothTrim,0,.49,-1.94,1.35,.11,.12,.025);
-
-// Ekstra detaljer på panseret
-smoothBox(smoothTrim,0,1.015,1.28,.23,.025,.48,.025);
-for(const side of [-1,1]){
- smoothBox(smoothChrome,side*.42,.995,1.25,.035,.018,.36,.01);
+/* Ekstern 3D-modell til Realistisk verden */
+function prepareCarModel(source){
+ const model=source.clone(true);
+ model.rotation.y=-Math.PI/2;
+ model.updateMatrixWorld(true);
+ let bounds=new THREE.Box3().setFromObject(model);
+ const size=bounds.getSize(new THREE.Vector3());
+ const factor=4.3/Math.max(size.z,.001);
+ model.scale.setScalar(factor);
+ model.updateMatrixWorld(true);
+ bounds=new THREE.Box3().setFromObject(model);
+ const center=bounds.getCenter(new THREE.Vector3());
+ model.position.x-=center.x;
+ model.position.z-=center.z;
+ model.position.y-=bounds.min.y;
+ model.traverse(obj=>{
+  if(obj.isMesh){
+   obj.castShadow=true;
+   obj.receiveShadow=true;
+   if(Array.isArray(obj.material))obj.material=obj.material.map(m=>m.clone());
+   else if(obj.material)obj.material=obj.material.clone();
+  }
+ });
+ const wrapper=new THREE.Group();
+ wrapper.name='externalRealisticModel';
+ wrapper.add(model);
+ wrapper.visible=realisticWorld;
+ return wrapper;
 }
-
-realisticBody.visible=realisticWorld;
-
-// SKYGGE UNDER BILEN
-const shadow=new THREE.Mesh(
- new THREE.CircleGeometry(1.7,24),
- new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.16})
+function attachModel(vehicle){
+ if(!externalCarModel)return;
+ const old=vehicle.getObjectByName('externalRealisticModel');
+ if(old)vehicle.remove(old);
+ const wrapper=prepareCarModel(externalCarModel);
+ vehicle.add(wrapper);
+}
+const modelLoader=new GLTFLoader();
+modelLoader.load(
+ 'https://raw.githubusercontent.com/JaronKBragg7337/spectral-gt-rs/main/spectral_gt_rs_game_ready.glb',
+ gltf=>{
+  externalCarModel=gltf.scene;
+  externalModelLoaded=true;
+  attachModel(car);
+  trafficCars.forEach(t=>attachModel(t));
+  applyWorldStyle();
+ },
+ undefined,
+ error=>{
+  console.warn('3D-bilmodellen kunne ikke lastes. Reservebilen brukes.',error);
+  externalModelLoaded=false;
+  applyWorldStyle();
+ }
 );
+
+const shadow=new THREE.Mesh(new THREE.CircleGeometry(1.7,24),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.16}));
 shadow.rotation.x=-Math.PI/2;
 shadow.scale.set(1,1.7,1);
 shadow.position.y=.015;
 car.add(shadow);
-
 car.rotation.y=Math.PI;
 car.position.set(3.1,0,4);
 
-// EKSPLOSJON
+/* EKSPLOSJON */
 const explosion=new THREE.Group();
 scene.add(explosion);
 explosion.visible=false;
@@ -459,7 +483,6 @@ const particleMaterials=[
  new THREE.MeshBasicMaterial({color:0x555b63,transparent:true,opacity:.8}),
  new THREE.MeshBasicMaterial({color:0xd9d9d9,transparent:true,opacity:.75})
 ];
-
 for(let i=0;i<48;i++){
  const isSmoke=i>=30;
  const material=particleMaterials[isSmoke?3+Math.floor(Math.random()*2):Math.floor(Math.random()*3)];
@@ -467,10 +490,7 @@ for(let i=0;i<48;i++){
  const particle=new THREE.Mesh(new THREE.SphereGeometry(size,8,7),material.clone());
  particle.visible=false;
  explosion.add(particle);
- explosionParticles.push({
-  mesh:particle,velocity:new THREE.Vector3(),life:0,maxLife:1,
-  startScale:1,smoke:isSmoke
- });
+ explosionParticles.push({mesh:particle,velocity:new THREE.Vector3(),life:0,maxLife:1,startScale:1,smoke:isSmoke});
 }
 const flash=new THREE.PointLight(0xff641c,0,18,2);
 explosion.add(flash);
@@ -506,17 +526,15 @@ function updateExplosion(dt){
   if(p.smoke){p.velocity.y+=.8*dt;p.velocity.multiplyScalar(1-dt*.35);}
   else p.velocity.y-=8*dt;
   const t=Math.min(p.life/p.maxLife,1);
-  if(p.smoke)p.mesh.scale.setScalar(p.startScale*(1+t*1.7));
-  else p.mesh.scale.setScalar(p.startScale*(1-t*.8));
+  p.mesh.scale.setScalar(p.startScale*(p.smoke?1+t*1.7:1-t*.8));
   p.mesh.material.opacity=(p.smoke?.8:1)*(1-t);
  }
  if(explosionTime>=2){explosionActive=false;explosion.visible=false;}
 }
 
-// TRAFIKK
+/* TRAFIKK */
 const trafficCars=[];
 const trafficColors=[0x2878d0,0xf0c52d];
-
 function makeTrafficCar(index,direction){
  const trafficCar=car.clone(true);
  trafficCar.position.set(direction==='same'?3.1:-3.1,0,direction==='same'?-95:-165);
@@ -528,12 +546,11 @@ function makeTrafficCar(index,direction){
  trafficCar.traverse(obj=>{
   if(!obj.isMesh||!obj.material)return;
   const original=obj.material;
-  obj.material=original.clone();
-  if(original===red||original===redDark||original===smoothPaint){
-   obj.material.color.setHex(trafficColors[index%trafficColors.length]);
-   obj.material.metalness=.35;
-   obj.material.roughness=.3;
-  }
+  obj.material=Array.isArray(original)?original.map(m=>m.clone()):original.clone();
+  const mats=Array.isArray(obj.material)?obj.material:[obj.material];
+  mats.forEach(m=>{
+   if(m.color&&(m===red||m===redDark||m===smoothPaint))m.color.setHex(trafficColors[index%trafficColors.length]);
+  });
  });
  scene.add(trafficCar);
  trafficCars.push(trafficCar);
@@ -541,7 +558,7 @@ function makeTrafficCar(index,direction){
 makeTrafficCar(0,'same');
 makeTrafficCar(1,'opposite');
 
-// BILBUTIKK, PENGER OG OPPDRAG
+/* BILBUTIKK OG OPPDRAG */
 const moneyEl=document.getElementById('coins');
 const overlay=document.getElementById('overlay');
 const overlayTitle=document.getElementById('overlayTitle');
@@ -568,7 +585,7 @@ let highScoreMeters=Number(localStorage.getItem('friKjoringHighScoreMeters')||0)
 const distanceDisplay=document.getElementById('distanceDisplay');
 const highscoreDisplay=document.getElementById('highscoreDisplay');
 let drivingSeconds=0,coinsCollected=0,fastestSpeedReached=0,longestCleanRun=0;
-let missionClaimed={};
+let missionClaimed=JSON.parse(localStorage.getItem('friKjoringMissionClaimed')||'{}');
 
 const missions=[
  {id:'distance1',stat:'distance',title:'🚗 Første langtur',description:'Kjør 1 km totalt.',goal:1000,reward:100,unit:'m'},
@@ -588,37 +605,34 @@ const missions=[
  {id:'cars3',stat:'cars',title:'🚘 Bilentusiast',description:'Eie 3 forskjellige biler.',goal:3,reward:250,unit:'biler'},
  {id:'cars5',stat:'cars',title:'🏎️ Bilkolleksjon',description:'Eie alle 5 bilene.',goal:5,reward:700,unit:'biler'}
 ];
-
-let missionProgress={distance:0,coins:0,time:0};
-
 function saveEconomy(){
  localStorage.setItem('friKjoringMoney',String(money));
  localStorage.setItem('friKjoringOwnedCars',JSON.stringify(ownedCars));
  localStorage.setItem('friKjoringSelectedCar',String(selectedCar));
  moneyEl.textContent='🪙 '+money+' kr';
 }
-
 function updateDistanceDisplay(){
  distanceDisplay.textContent='📏 Kjørt: '+Math.floor(runDistanceMeters)+' m';
  highscoreDisplay.textContent='🏆 Highscore: '+Math.floor(highScoreMeters)+' m';
 }
 
-// INNSTILLINGER FOR VERDEN OG BILSTIL
+/* VERDENSMODUS */
 function applyWorldStyle(){
  realisticWorld=localStorage.getItem('friKjoringWorldStyle')==='realistic';
-
  scene.background.setHex(realisticWorld?0x9fc8df:0x91d9ff);
  scene.fog.color.setHex(realisticWorld?0x9fc8df:0x91d9ff);
-
- grass.color.setHex(realisticWorld?0x477b3c:0x67b64e);
- asphalt.color.setHex(realisticWorld?0x252a30:0x343941);
+ grass.color.setHex(realisticWorld?0xffffff:0x67b64e);
+ grass.map=realisticWorld?grassTexture:null;
+ grass.needsUpdate=true;
+ asphalt.color.setHex(realisticWorld?0xffffff:0x343941);
+ asphalt.map=realisticWorld?asphaltTexture:null;
+ asphalt.needsUpdate=true;
  shoulderMat.color.setHex(realisticWorld?0x777b78:0x999b8b);
  trunkMat.color.setHex(realisticWorld?0x59402e:0x765039);
  treeMats[0].color.setHex(realisticWorld?0x174c2b:0x236c37);
  treeMats[1].color.setHex(realisticWorld?0x216137:0x2f8241);
  treeMats[2].color.setHex(realisticWorld?0x285d30:0x347c3a);
  shrubMat.color.setHex(realisticWorld?0x2c6735:0x3f8b42);
-
  hemi.intensity=realisticWorld?1.65:2.1;
  sun.intensity=realisticWorld?3:2.5;
  renderer.toneMappingExposure=realisticWorld?1.05:1.12;
@@ -626,29 +640,24 @@ function applyWorldStyle(){
  function setCarStyle(vehicle){
   vehicle.traverse(obj=>{
    if(obj.userData.originalCarPart)obj.visible=!realisticWorld;
-   if(obj.name==='realisticBody')obj.visible=realisticWorld;
+   if(obj.name==='realisticBody')obj.visible=realisticWorld&&!externalModelLoaded;
+   if(obj.name==='externalRealisticModel')obj.visible=realisticWorld&&externalModelLoaded;
   });
  }
  setCarStyle(car);
  trafficCars.forEach(setCarStyle);
-
  localStorage.setItem('friKjoringWorldStyle',realisticWorld?'realistic':'classic');
 }
-
 function renderSettings(){
  overlayTitle.textContent='⚙️ Innstillinger';
- overlayText.textContent='Velg hvordan verden og bilene skal se ut. Valget lagres automatisk på denne enheten.';
-
+ overlayText.textContent='Velg verden du vil kjøre i. Valget lagres automatisk på denne enheten.';
  overlayContent.innerHTML=
   '<button class="settingOption '+(!realisticWorld?'active':'')+'" data-style="classic">'+
-   '<strong>🌤️ Vanlig verden '+(!realisticWorld?'✓':'')+'</strong>'+
-   '<span>Den opprinnelige grafikken og bilstilen du kjenner fra spillet.</span>'+
-  '</button>'+
+  '<strong>🕹️ Arcade '+(!realisticWorld?'✓':'')+'</strong>'+
+  '<span>Den opprinnelige spillverdenen og den klassiske bilstilen.</span></button>'+
   '<button class="settingOption '+(realisticWorld?'active':'')+'" data-style="realistic">'+
-   '<strong>🏎️ Realistisk verden '+(realisticWorld?'✓':'')+'</strong>'+
-   '<span>Glattere karosseri, metallisk lakk, mer markerte lys og mørkere, mer realistiske farger i verdenen.</span>'+
-  '</button>';
-
+  '<strong>🏎️ Realistisk verden '+(realisticWorld?'✓':'')+'</strong>'+
+  '<span>En ekte ekstern 3D-bilmodell når den er tilgjengelig, mer detaljert vei og gress, mørkere farger og endret lys.</span></button>';
  overlayContent.querySelectorAll('[data-style]').forEach(btn=>{
   btn.addEventListener('click',()=>{
    realisticWorld=btn.dataset.style==='realistic';
@@ -658,32 +667,21 @@ function renderSettings(){
   });
  });
 }
-
 function paintPlayerCar(){
  const chosen=carsForSale[selectedCar]||carsForSale[0];
  const shape=chosen.scale||[1,1,1];
  car.scale.set(shape[0],shape[1],shape[2]);
-
  car.traverse(obj=>{
   if(!obj.isMesh||!obj.material)return;
-  if(obj.material===red||obj.material===redDark){
-   obj.material.color.setHex(chosen.color);
-  }
+  const materials=Array.isArray(obj.material)?obj.material:[obj.material];
+  materials.forEach(m=>{
+   if(m===red||m===redDark)m.color.setHex(chosen.color);
+  });
  });
-
- // Endre også fargen på den glatte karosserimodellen.
  smoothPaint.color.setHex(chosen.color);
-
- if(car.userData.carDetails){
-  car.userData.carDetails.forEach(obj=>car.remove(obj));
- }
+ if(car.userData.carDetails)car.userData.carDetails.forEach(obj=>car.remove(obj));
  car.userData.carDetails=[];
-
- const detailMat=new THREE.MeshStandardMaterial({
-  color:selectedCar===0?0x26333a:selectedCar===1?0x991622:selectedCar===2?0x282828:0xf4f0ff,
-  roughness:.45,metalness:.18
- });
-
+ const detailMat=mat(selectedCar===0?0x26333a:selectedCar===1?0x991622:selectedCar===2?0x282828:0xf4f0ff,.45,.18);
  if(selectedCar===0){
   const roofBar=new THREE.Mesh(new THREE.BoxGeometry(1.05,.07,.09),dark);
   roofBar.position.set(0,1.47,-.25);
@@ -699,10 +697,8 @@ function paintPlayerCar(){
    car.userData.carDetails.push(stripe);
   }
  }
-
  applyWorldStyle();
 }
-
 function selectCar(index){
  if(!ownedCars.includes(index))return;
  selectedCar=index;
@@ -710,7 +706,6 @@ function selectCar(index){
  paintPlayerCar();
  renderShop();
 }
-
 function renderShop(){
  overlayTitle.textContent='🚘 Bilbutikk';
  overlayText.textContent='Pengene dine: '+money+' kr. Kjør langt, samle mynter og fullfør oppdrag for å tjene mer.';
@@ -720,7 +715,6 @@ function renderShop(){
   const label=selected?'Valgt bil':owned?'Velg bilen':'Kjøp · '+c.price+' kr';
   return '<div class="shopCar"><div style="font-size:32px;color:'+color+'">🏎️</div><strong>'+c.name+'</strong><div class="small">Toppfart: '+c.maxSpeed+' km/t</div><p>'+c.description+'</p><button class="actionBtn" data-car="'+i+'">'+label+'</button></div>';
  }).join('')+'</div>';
-
  overlayContent.querySelectorAll('[data-car]').forEach(btn=>btn.addEventListener('click',()=>{
   const i=Number(btn.dataset.car);
   if(ownedCars.includes(i)){selectCar(i);return;}
@@ -730,12 +724,9 @@ function renderShop(){
    saveEconomy();
    selectCar(i);
    renderShop();
-  }else{
-   overlayText.textContent='Du mangler '+(carsForSale[i].price-money)+' kr. Kjør videre eller fullfør oppdrag!';
-  }
+  }else overlayText.textContent='Du mangler '+(carsForSale[i].price-money)+' kr. Kjør videre eller fullfør oppdrag!';
  }));
 }
-
 function missionValue(m){
  if(m.stat==='distance')return Math.floor(distanceMeters);
  if(m.stat==='coins')return coinsCollected;
@@ -745,50 +736,41 @@ function missionValue(m){
  if(m.stat==='cars')return ownedCars.length;
  return 0;
 }
-
 function renderMissions(){
  overlayTitle.textContent='🎯 Oppdrag';
- overlayText.textContent='Du har '+missions.filter(m=>missionClaimed[m.id]).length+' av '+missions.length+' oppdrag hentet. Fullfør et oppdrag og trykk Hent belønning for å få pengene.';
+ overlayText.textContent='Du har '+missions.filter(m=>missionClaimed[m.id]).length+' av '+missions.length+' oppdrag hentet. Fullfør et oppdrag og hent belønningen.';
  overlayContent.innerHTML=missions.map(m=>{
   const value=missionValue(m),done=value>=m.goal,claimed=!!missionClaimed[m.id];
-  const shown=Math.min(value,m.goal)+' / '+m.goal+' '+m.unit;
-  return '<div class="shopCar" style="margin-bottom:9px"><strong>'+m.title+'</strong><div>'+m.description+'</div><div id="missionProgress">'+shown+'</div><div class="small">Belønning: '+m.reward+' kr</div><button class="actionBtn" data-mission="'+m.id+'" '+(!done||claimed?'disabled':'')+'>'+(claimed?'Hentet ✓':done?'Hent '+m.reward+' kr':'Ikke fullført ennå')+'</button></div>';
+  return '<div class="shopCar" style="margin-bottom:9px"><strong>'+m.title+'</strong><div>'+m.description+'</div><div id="missionProgress">'+Math.min(value,m.goal)+' / '+m.goal+' '+m.unit+'</div><div class="small">Belønning: '+m.reward+' kr</div><button class="actionBtn" data-mission="'+m.id+'" '+(!done||claimed?'disabled':'')+'>'+(claimed?'Hentet ✓':done?'Hent '+m.reward+' kr':'Ikke fullført ennå')+'</button></div>';
  }).join('');
-
- overlayContent.querySelectorAll('[data-mission]').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-   const id=btn.dataset.mission,m=missions.find(x=>x.id===id);
-   if(m&&missionValue(m)>=m.goal&&!missionClaimed[id]){
-    missionClaimed[id]=true;
-    money+=m.reward;
-    saveEconomy();
-    renderMissions();
-   }
-  });
- });
+ overlayContent.querySelectorAll('[data-mission]').forEach(btn=>btn.addEventListener('click',()=>{
+  const id=btn.dataset.mission,m=missions.find(x=>x.id===id);
+  if(m&&missionValue(m)>=m.goal&&!missionClaimed[id]){
+   missionClaimed[id]=true;
+   localStorage.setItem('friKjoringMissionClaimed',JSON.stringify(missionClaimed));
+   money+=m.reward;
+   saveEconomy();
+   renderMissions();
+  }
+ }));
 }
-
 function openShop(){renderShop();overlay.style.display='flex';resetKeys();}
 function openMissions(){renderMissions();overlay.style.display='flex';resetKeys();}
 function openSettings(){renderSettings();overlay.style.display='flex';resetKeys();}
-
 document.getElementById('shopOpen').addEventListener('click',openShop);
 document.getElementById('missionsOpen').addEventListener('click',openMissions);
 document.getElementById('settingsOpen').addEventListener('click',openSettings);
 document.getElementById('closeOverlay').addEventListener('click',()=>overlay.style.display='none');
 
-// MYNTER
+/* MYNTER */
 const roadCoins=[];
-const coinMaterial=new THREE.MeshStandardMaterial({
- color:0xffd22e,metalness:.72,roughness:.25,emissive:0x805400,emissiveIntensity:.18
-});
+const coinMaterial=new THREE.MeshStandardMaterial({color:0xffd22e,metalness:.72,roughness:.25,emissive:0x805400,emissiveIntensity:.18});
 function makeRoadCoin(z,i){
  const coin=new THREE.Mesh(new THREE.TorusGeometry(.42,.14,8,16),coinMaterial);
  coin.position.set(i%2===0?-3.1:3.1,.95,z);
  coin.rotation.x=Math.PI/2;
  coin.castShadow=true;
- coin.userData.baseX=coin.position.x;
- coin.userData.laneX=i%2===0?-3.1:3.1;
+ coin.userData.laneX=coin.position.x;
  scene.add(coin);
  roadCoins.push(coin);
 }
@@ -813,10 +795,10 @@ function resetTraffic(){
  }
 }
 
-// KONTROLLER
+/* KONTROLLER */
 let speed=0,carX=3.1,steer=0,crashed=false;
 const keys={left:false,right:false,gas:false,brake:false};
-
+function resetKeys(){for(const k in keys)keys[k]=false;}
 function bind(id,key){
  const el=document.getElementById(id);
  const down=e=>{
@@ -832,12 +814,7 @@ function bind(id,key){
  el.addEventListener('lostpointercapture',()=>keys[key]=false);
  el.addEventListener('contextmenu',e=>e.preventDefault());
 }
-bind('left','left');
-bind('right','right');
-bind('gas','gas');
-bind('brake','brake');
-
-function resetKeys(){for(const k in keys)keys[k]=false;}
+bind('left','left');bind('right','right');bind('gas','gas');bind('brake','brake');
 
 function restartGame(){
  if(runDistanceMeters>highScoreMeters){
@@ -851,26 +828,18 @@ function restartGame(){
  car.position.set(3.1,0,4);
  car.rotation.set(0,Math.PI,0);
  resetKeys();
-
- for(let i=0;i<roadSegments.length;i++){
-  roadSegments[i].position.z=-i*segmentLength-segmentLength/2;
- }
+ for(let i=0;i<roadSegments.length;i++)roadSegments[i].position.z=-i*segmentLength-segmentLength/2;
  for(const object of roadside)object.position.z=object.userData.originalZ;
  resetTraffic();
  resetCoins();
- explosionActive=false;
- explosion.visible=false;
- explosionTime=0;
- flash.intensity=0;
+ explosionActive=false;explosion.visible=false;explosionTime=0;flash.intensity=0;
  document.getElementById('speed').textContent='0 km/t';
  const message=document.getElementById('message');
  message.textContent='Trykk på gassen for å kjøre!';
  message.style.opacity='1';
 }
-
 addEventListener('blur',resetKeys);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)resetKeys();});
-
 addEventListener('keydown',e=>{
  const k=e.key.toLowerCase();
  if(['arrowleft','arrowright','arrowup','arrowdown',' '].includes(k))e.preventDefault();
@@ -887,11 +856,9 @@ addEventListener('keyup',e=>{
  if(['arrowup','w'].includes(k))keys.gas=false;
  if(['arrowdown','s'].includes(k))keys.brake=false;
 });
-
-// Husk hvor trær og busker startet.
 for(const object of roadside)object.userData.originalZ=object.position.z;
 
-// KAMERA
+/* KAMERA */
 camera.position.set(0,5.7,12.5);
 camera.lookAt(0,1,-8);
 const clock=new THREE.Clock();
@@ -900,7 +867,6 @@ function animate(){
  requestAnimationFrame(animate);
  const dt=Math.min(clock.getDelta(),.035);
  updateExplosion(dt);
-
  if(crashed){
   speed=0;
   restartTimer-=dt;
@@ -913,42 +879,32 @@ function animate(){
   return;
  }
 
- // FART OG BREMS
  if(keys.gas)speed=Math.min(speed+42*dt,carsForSale[selectedCar].maxSpeed);
  else speed=Math.max(speed-4.5*dt,0);
  if(keys.brake)speed=Math.max(speed-65*dt,0);
 
- // STYRING
  steer=(keys.right?1:0)-(keys.left?1:0);
  const steeringPower=.85+Math.min(speed/100,1)*.45;
  carX+=steer*steeringPower*dt*(.9+speed*.026);
  carX=Math.max(-27,Math.min(27,carX));
  car.position.x=THREE.MathUtils.damp(car.position.x,carX,10,dt);
  car.rotation.z=THREE.MathUtils.damp(car.rotation.z,-steer*.055*Math.min(speed/50,1),7,dt);
-
  for(const wheel of wheels)wheel.rotation.x-=speed*dt*.045;
 
- // FLYTT VEIEN
  const movement=speed*dt*.72;
  for(const segment of roadSegments){
   segment.position.z+=movement;
   if(segment.position.z>segmentLength/2)segment.position.z-=totalRoadLength;
  }
-
- // FLYTT TRÆR OG BUSKER
  for(const object of roadside){
   object.position.z+=movement;
   if(object.position.z>15)object.position.z-=totalRoadLength;
  }
-
- // TRAFIKK
  for(const t of trafficCars){
   const relativeSpeed=t.userData.direction==='same'?speed-t.userData.trafficSpeed:speed+t.userData.trafficSpeed;
   t.position.z+=relativeSpeed*dt*.72;
   if(t.position.z>18)t.position.z=-155-Math.random()*75;
  }
-
- // MYNTER
  for(const coin of roadCoins){
   coin.position.z+=movement;
   coin.rotation.z+=dt*2.8;
@@ -961,12 +917,9 @@ function animate(){
    coin.visible=false;
    money+=10;
    coinsCollected++;
-   missionProgress.coins=coinsCollected;
    saveEconomy();
   }
  }
-
- // AVSTAND, TID, FART OG REKORDER
  if(speed>0){
   const travelled=speed*dt/3.6;
   distanceMeters+=travelled;
@@ -974,8 +927,6 @@ function animate(){
   longestCleanRun=Math.max(longestCleanRun,runDistanceMeters);
   fastestSpeedReached=Math.max(fastestSpeedReached,speed);
   drivingSeconds+=dt;
-  missionProgress.distance=distanceMeters;
-  missionProgress.time=drivingSeconds;
   if(runDistanceMeters>highScoreMeters){
    highScoreMeters=Math.floor(runDistanceMeters);
    localStorage.setItem('friKjoringHighScoreMeters',String(highScoreMeters));
@@ -983,7 +934,7 @@ function animate(){
   updateDistanceDisplay();
  }
 
- // KRASJ MED TRÆR
+ /* KRASJ MED TRÆR */
  if(!crashed){
   for(const tree of trees){
    const dx=tree.position.x-car.position.x;
@@ -996,19 +947,14 @@ function animate(){
      highScoreMeters=Math.floor(runDistanceMeters);
      localStorage.setItem('friKjoringHighScoreMeters',String(highScoreMeters));
     }
-    updateDistanceDisplay();
-    speed=0;
-    resetKeys();
-    startExplosion();
-    restartTimer=2;
+    updateDistanceDisplay();speed=0;resetKeys();startExplosion();restartTimer=2;
     document.getElementById('message').textContent='💥 KRASJ!';
     document.getElementById('message').style.opacity='1';
     break;
    }
   }
  }
-
- // KRASJ MED TRAFIKK
+ /* KRASJ MED TRAFIKK */
  if(!crashed){
   for(const t of trafficCars){
    const dx=Math.abs(t.position.x-car.position.x);
@@ -1019,11 +965,7 @@ function animate(){
      highScoreMeters=Math.floor(runDistanceMeters);
      localStorage.setItem('friKjoringHighScoreMeters',String(highScoreMeters));
     }
-    updateDistanceDisplay();
-    speed=0;
-    resetKeys();
-    startExplosion();
-    restartTimer=2;
+    updateDistanceDisplay();speed=0;resetKeys();startExplosion();restartTimer=2;
     document.getElementById('message').textContent='💥 KRASJ! Kollisjon med bil!';
     document.getElementById('message').style.opacity='1';
     break;
@@ -1031,25 +973,20 @@ function animate(){
   }
  }
 
- // KAMERAET FØLGER BILEN
  const desiredCamera=new THREE.Vector3(car.position.x*.42,5.7,12.5);
  camera.position.lerp(desiredCamera,1-Math.exp(-3.2*dt));
  camera.lookAt(car.position.x*.25,.95,-9);
-
  document.getElementById('speed').textContent=Math.round(speed)+' km/t';
  moneyEl.textContent='🪙 '+money+' kr';
  if(!crashed)document.getElementById('message').style.opacity=speed>5?'0':'1';
-
  renderer.render(scene,camera);
 }
-
 addEventListener('resize',()=>{
  camera.aspect=innerWidth/innerHeight;
  camera.updateProjectionMatrix();
  renderer.setSize(innerWidth,innerHeight);
  renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));
 });
-
 loading.style.display='none';
 animate();
 })();
