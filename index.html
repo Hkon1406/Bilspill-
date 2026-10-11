@@ -1158,31 +1158,7 @@ function animate(){
           String(highScoreMeters)
         );
       }
-     if(!crashed){
-  for(const house of houses){
-
-    const dx=Math.abs(house.position.x-car.position.x);
-    const dz=Math.abs(house.position.z-car.position.z);
-
-    if(dx<2.2 && dz<2.2){
-
-      crashed=true;
-
-      updateDistanceDisplay();
-      speed=0;
-      resetKeys();
-      startExplosion();
-      restartTimer=2;
-
-      document.getElementById('message').textContent=
-      '💥 KRASJ! Hytte!';
-
-      document.getElementById('message').style.opacity='1';
-
-      break;
-    }
-  }
-}
+    
 
       updateDistanceDisplay();
       speed=0;
@@ -1192,6 +1168,31 @@ function animate(){
 
       document.getElementById('message').textContent=
       '💥 KRASJ! Gatelykt!';
+
+      document.getElementById('message').style.opacity='1';
+
+      break;
+    }
+  }
+}
+ if(!crashed){
+  for(const house of houses){
+
+    const dx = Math.abs(house.position.x - car.position.x);
+    const dz = Math.abs(house.position.z - car.position.z);
+
+    if(dx < 3.5 && dz < 3.5){
+
+      crashed = true;
+
+      updateDistanceDisplay();
+      speed = 0;
+      resetKeys();
+      startExplosion();
+      restartTimer = 2;
+
+      document.getElementById('message').textContent =
+      '💥 KRASJ! Hytte!';
 
       document.getElementById('message').style.opacity='1';
 
