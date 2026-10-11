@@ -264,7 +264,10 @@ const treeMats=[mat(0x236c37),mat(0x2f8241),mat(0x347c3a)];
 
 function makeTree(x,z,scale=1){
  const g=new THREE.Group();
- const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.13,.22,1.45,8),trunkMat);
+const trunk=new THREE.Mesh(
+   new THREE.CylinderGeometry(.10,.18,1.9,10),
+   trunkMat
+);
  trunk.position.y=.72;
  trunk.castShadow=true;
  g.add(trunk);
@@ -274,7 +277,7 @@ function makeTree(x,z,scale=1){
 ),
    treeMats[i]
  );
- crown.position.y=1.65+i*.78;
+ crown.position.y=1.35+i*.55;
  crown.castShadow=true;
  g.add(crown);
 }
