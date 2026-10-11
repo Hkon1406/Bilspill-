@@ -568,7 +568,7 @@ let drivingSeconds=0,coinsCollected=0,fastestSpeedReached=0,longestCleanRun=0;
 let missionClaimed=JSON.parse(localStorage.getItem('friKjoringMissionClaimed')||'{}');
 
 const missions=[
- {id:'distance1',stat:'distance',title:'🚗 Første langtur',description:'Kjør 1 km totalt.',goal:1000,reward:100,unit:'m'},
+ {id:'distance1',stat:'distance',title:'🚗 Første langtur',description:'Kjør 1 km totalt.',goal:1000,reward:1000000,unit:'m'},
  {id:'distance3',stat:'distance',title:'🛣️ På vei videre',description:'Kjør 3 km totalt.',goal:3000,reward:200,unit:'m'},
  {id:'distance10',stat:'distance',title:'🏆 Veikonge',description:'Kjør 10 km totalt.',goal:10000,reward:500,unit:'m'},
  {id:'coins8',stat:'coins',title:'🪙 Myntsamler',description:'Samle 8 mynter.',goal:8,reward:100,unit:'mynter'},
@@ -599,8 +599,8 @@ function updateDistanceDisplay(){
 
 function applyWorldStyle(){
  realisticWorld=localStorage.getItem('friKjoringWorldStyle')==='realistic';
- scene.background.setHex(realisticWorld?0x9fc8df:0x91d9ff);
- scene.fog.color.setHex(realisticWorld?0x9fc8df:0x91d9ff);
+scene.background.setHex(realisticWorld?0x7fa6bf:0x91d9ff);
+ scene.fog.color.setHex(realisticWorld?0x7fa6bf:0x91d9ff);
  grass.color.setHex(realisticWorld?0xffffff:0x67b64e);
  grass.map=realisticWorld?grassTexture:null;
  grass.needsUpdate=true;
