@@ -428,7 +428,19 @@ sign.add(border);
         const side = Math.random() < 0.5 ? -1 : 1;
 
         const house = new THREE.Group();
+     house.scale.setScalar(
+    0.8 + Math.random()*0.7
+);
 
+     const windowMesh = new THREE.Mesh(
+    new THREE.BoxGeometry(0.5,0.5,0.05),
+    new THREE.MeshStandardMaterial({
+        color:0xaadfff
+    })
+);
+
+windowMesh.position.set(0.8,1.2,1.53);
+house.add(windowMesh);
         const walls = new THREE.Mesh(
             new THREE.BoxGeometry(3,2.2,3),
             new THREE.MeshStandardMaterial({
