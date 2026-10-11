@@ -392,10 +392,8 @@ for(let z=-80; z>-totalRoadLength; z-=300){
     new THREE.CylinderGeometry(0.5,0.5,0.05,24),
     signFaceMat
 );
-       
-    })
-);
- const border = new THREE.Mesh(
+
+const border = new THREE.Mesh(
     new THREE.CylinderGeometry(0.53,0.53,0.03,24),
     new THREE.MeshStandardMaterial({
         color:0xcc0000
