@@ -286,9 +286,13 @@ function makeTree(x,z,scale=1){
  roadside.push(g);
  trees.push(g);
 }
-for(let z=-12;z>-totalRoadLength;z-=13){
- makeTree(-9-Math.random()*15,z-Math.random()*8,.75+Math.random()*.7);
- makeTree(9+Math.random()*15,z-Math.random()*8,.75+Math.random()*.7);
+for(let z=-12;z>-totalRoadLength;z-=8){
+ makeTree(-9-Math.random()*18,z-Math.random()*8,.8+Math.random()*.9);
+makeTree(9+Math.random()*18,z-Math.random()*8,.8+Math.random()*.9);
+
+if(realisticWorld){
+   makeTree(-15-Math.random()*20,z-Math.random()*8,.7+Math.random()*1.1);
+   makeTree(15+Math.random()*20,z-Math.random()*8,.7+Math.random()*1.1);
 }
 const shrubMat=mat(0x3f8b42);
 for(let i=0;i<100;i++){
