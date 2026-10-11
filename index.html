@@ -579,14 +579,13 @@ if(Math.random() < 0.04){
   busSign.position.set(1.8,2.3,0); stop.add(busSign);
   stop.add(sign);
 
-  const side = Math.random() < 0.5 ? -1 : 1;
+ const stopSide = Math.random() < 0.5 ? -1 : 1;
 
-  stop.position.set(
-    side * (10 + Math.random()*3),
+stop.position.set(
+    stopSide * (10 + Math.random()*3),
     0,
     z
-  );
-
+);
   scene.add(stop);
   roadside.push(stop);
 }
