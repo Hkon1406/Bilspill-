@@ -265,6 +265,7 @@ for(let i=0;i<segmentCount;i++)makeRoadSegment(i);
 
 const roadside=[],trees=[],shrubs=[];
  const streetLights=[];
+ const roadSigns=[];
 const treeMats=[mat(0x236c37),mat(0x2f8241),mat(0x347c3a)];
 
 function makeTree(x,z,scale=1){
@@ -346,6 +347,39 @@ for(let z=-25; z>-totalRoadLength; z-=60){
 roadside.push(light);
 streetLights.push(light);
     }
+}
+ const signPoleMat = mat(0x888888);
+const signFaceMat = new THREE.MeshStandardMaterial({
+    color:0xffffff
+});
+
+for(let z=-40; z>-totalRoadLength; z-=120){
+
+    const sign = new THREE.Group();
+
+    const pole = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.05,0.05,2.5,8),
+        signPoleMat
+    );
+
+    pole.position.y = 1.25;
+    sign.add(pole);
+
+    const face = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.5,0.5,0.05,24),
+        signFaceMat
+    );
+
+    face.rotation.x = Math.PI/2;
+    face.position.set(0,2.2,0);
+
+    sign.add(face);
+
+    sign.position.set(-8,0,z);
+
+    scene.add(sign);
+    roadside.push(sign);
+    roadSigns.push(sign);
 }
 const shrubMat=mat(0x3f8b42);
 for(let i=0;i<100;i++){
