@@ -1,1 +1,8 @@
+var Frikjoring = pc.createScript('frikjoring');
 
+Frikjoring.prototype.initialize = function () {
+    console.log('Fri Kjøring er startet!');
+};
+
+Frikjoring.prototype.update = function (dt) {
+};
