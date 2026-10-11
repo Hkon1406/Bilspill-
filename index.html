@@ -411,14 +411,10 @@ sign.add(border);
     sign.add(face);
 
     for(const side of [-1,1]){
-   
 
     const signClone = sign.clone(true);
 
     signClone.position.set(side*8,0,z);
-     if(side === 1){
-  
-}
 
     scene.add(signClone);
     roadside.push(signClone);
