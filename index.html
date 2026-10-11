@@ -264,6 +264,7 @@ function makeRoadSegment(i){
 for(let i=0;i<segmentCount;i++)makeRoadSegment(i);
 
 const roadside=[],trees=[],shrubs=[];
+ const streetLights=[];
 const treeMats=[mat(0x236c37),mat(0x2f8241),mat(0x347c3a)];
 
 function makeTree(x,z,scale=1){
@@ -342,7 +343,8 @@ for(let z=-25; z>-totalRoadLength; z-=60){
         light.position.set(side*9,0,z);
 
         scene.add(light);
-        roadside.push(light);
+roadside.push(light);
+streetLights.push(light);
     }
 }
 const shrubMat=mat(0x3f8b42);
