@@ -353,7 +353,7 @@ const signFaceMat = new THREE.MeshStandardMaterial({
     color:0xffffff
 });
 
-for(let z=-40; z>-totalRoadLength; z-=120){
+for(let z=-50; z>-totalRoadLength; z-=200){
 
     const sign = new THREE.Group();
 
@@ -369,17 +369,33 @@ for(let z=-40; z>-totalRoadLength; z-=120){
         new THREE.CylinderGeometry(0.5,0.5,0.05,24),
         signFaceMat
     );
+ const border = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.57,0.57,0.03,24),
+    new THREE.MeshStandardMaterial({
+        color:0xcc0000
+    })
+);
+
+border.rotation.x=Math.PI/2;
+border.position.set(0,2.2,-0.01);
+
+sign.add(border);
 
     face.rotation.x = Math.PI/2;
     face.position.set(0,2.2,0);
 
     sign.add(face);
 
-    sign.position.set(-8,0,z);
+    for(const side of [-1,1]){
 
-    scene.add(sign);
-    roadside.push(sign);
-    roadSigns.push(sign);
+    const signClone = sign.clone(true);
+
+    signClone.position.set(side*8,0,z);
+
+    scene.add(signClone);
+    roadside.push(signClone);
+    roadSigns.push(signClone);
+}
 }
 const shrubMat=mat(0x3f8b42);
 for(let i=0;i<100;i++){
