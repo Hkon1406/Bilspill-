@@ -199,7 +199,38 @@ grassTexture.repeat.set(85,85);
 const asphaltTexture=makeNoiseTexture('#292c30',100,14000);
 asphaltTexture.repeat.set(2,10);
 
-const ground=new THREE.Mesh(new THREE.PlaneGeometry(3000,3000),grass);
+const terrainGeometry = new THREE.PlaneGeometry(
+    3000,
+    3000,
+    120,
+    120
+);
+
+const vertices = terrainGeometry.attributes.position;
+
+for(let i=0;i<vertices.count;i++){
+    const x = vertices.getX(i);
+    const y = vertices.getY(i);
+
+    const height =
+        Math.sin(x * 0.005) * 4 +
+        Math.cos(y * 0.006) * 3 +
+        Math.sin((x+y) * 0.003) * 5;
+
+    vertices.setZ(i,height);
+}
+
+terrainGeometry.computeVertexNormals();
+
+const ground = new THREE.Mesh(
+    terrainGeometry,
+    grass
+);
+
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = -2;
+ground.receiveShadow = true;
+scene.add(ground);
 ground.rotation.x=-Math.PI/2;
 ground.position.y=-.15;
 ground.receiveShadow=true;
