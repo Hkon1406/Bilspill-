@@ -353,7 +353,7 @@ const signFaceMat = new THREE.MeshStandardMaterial({
     color:0xffffff
 });
 
-for(let z=-50; z>-totalRoadLength; z-=200){
+for(let z=-80; z>-totalRoadLength; z-=300){
 
     const sign = new THREE.Group();
 
@@ -387,10 +387,14 @@ sign.add(border);
     sign.add(face);
 
     for(const side of [-1,1]){
+     pole.position.x = side * 0.35;
 
     const signClone = sign.clone(true);
 
     signClone.position.set(side*8,0,z);
+     if(side === 1){
+    signClone.rotation.y = Math.PI;
+}
 
     scene.add(signClone);
     roadside.push(signClone);
