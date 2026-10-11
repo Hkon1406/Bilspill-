@@ -421,6 +421,46 @@ sign.add(border);
     roadSigns.push(signClone);
 }
 }
+ if(realisticWorld){
+
+    for(let z=-100; z>-totalRoadLength; z-=350){
+
+        const side = Math.random() < 0.5 ? -1 : 1;
+
+        const house = new THREE.Group();
+
+        const walls = new THREE.Mesh(
+            new THREE.BoxGeometry(3,2.2,3),
+            new THREE.MeshStandardMaterial({
+                color:0xaa2222
+            })
+        );
+
+        walls.position.y = 1.1;
+        house.add(walls);
+
+        const roof = new THREE.Mesh(
+            new THREE.ConeGeometry(2.6,1.5,4),
+            new THREE.MeshStandardMaterial({
+                color:0x333333
+            })
+        );
+
+        roof.rotation.y = Math.PI/4;
+        roof.position.y = 3;
+        house.add(roof);
+
+        house.position.set(
+            side * (14 + Math.random()*8),
+            0,
+            z
+        );
+
+        scene.add(house);
+        roadside.push(house);
+    }
+
+}
 const shrubMat=mat(0x3f8b42);
 for(let i=0;i<100;i++){
  const side=Math.random()<.5?-1:1;
