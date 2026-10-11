@@ -6,3 +6,11 @@ Frikjoring.prototype.initialize = function () {
 
 Frikjoring.prototype.update = function (dt) {
 };
+
+Jeg jobber med et 3D-bilspill som heter «Fri Kjøring», laget i HTML, CSS og JavaScript med Three.js. Jeg vil gjøre verdenen mye mer realistisk med gode 3D-modeller av trær, busker, steiner, terreng, asfalt og norske omgivelser.
+
+Jeg vil beholde alle eksisterende funksjoner, inkludert bilbutikk, biler, penger, mynter, oppdrag, trafikk, krasj, highscore, mobilkontroller og både Arcade-modus og Realistisk verden.
+
+Hjelp meg med å forbedre den eksisterende koden uten å forenkle eller fjerne funksjoner. Bruk bare ekte, kontrollerbare URL-er til 3D-modeller og teksturer, og lag reservegrafikk dersom modellene ikke kan lastes.
+
+Ikke skriv en ny spillkode ennå. Fortell meg først hvordan jeg best kan sende deg den eksisterende HTML-koden, slik at du kan undersøke den.
