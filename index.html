@@ -302,6 +302,49 @@ if(realisticWorld){
    makeTree(15+Math.random()*20,z-Math.random()*8,.7+Math.random()*1.1);
 }
  }
+ const streetLightMat = mat(0x666666);
+const streetLightLamp = new THREE.MeshStandardMaterial({
+    color:0xffffcc,
+    emissive:0xffffcc,
+    emissiveIntensity:1.5
+});
+
+for(let z=-25; z>-totalRoadLength; z-=60){
+
+    for(const side of [-1,1]){
+
+        const light = new THREE.Group();
+
+        const pole = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.08,0.10,6,8),
+            streetLightMat
+        );
+
+        pole.position.y = 3;
+        light.add(pole);
+
+        const arm = new THREE.Mesh(
+            new THREE.BoxGeometry(1.2,0.08,0.08),
+            streetLightMat
+        );
+
+        arm.position.set(side*-0.5,5.8,0);
+        light.add(arm);
+
+        const lamp = new THREE.Mesh(
+            new THREE.BoxGeometry(0.25,0.15,0.25),
+            streetLightLamp
+        );
+
+        lamp.position.set(side*-1.0,5.7,0);
+        light.add(lamp);
+
+        light.position.set(side*9,0,z);
+
+        scene.add(light);
+        roadside.push(light);
+    }
+}
 const shrubMat=mat(0x3f8b42);
 for(let i=0;i<100;i++){
  const side=Math.random()<.5?-1:1;
