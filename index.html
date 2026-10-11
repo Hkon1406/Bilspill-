@@ -388,10 +388,13 @@ for(let z=-80; z>-totalRoadLength; z-=300){
     pole.position.y = 1.25;
     sign.add(pole);
 
-    const face = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.5,0.5,0.05,24),
-        signFaceMat
-    );
+   const face = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.5,0.5,0.05,24),
+    new THREE.MeshStandardMaterial({
+        map: signTexture,
+        color: 0xff0000
+    })
+);
  const border = new THREE.Mesh(
     new THREE.CylinderGeometry(0.53,0.53,0.03,24),
     new THREE.MeshStandardMaterial({
