@@ -995,6 +995,39 @@ function animate(){
   }
  }
  if(!crashed){
+  for(const light of streetLights){
+
+    const dx=Math.abs(light.position.x-car.position.x);
+    const dz=Math.abs(light.position.z-car.position.z);
+
+    if(dx<1.2 && dz<2){
+
+      crashed=true;
+
+      if(runDistanceMeters>highScoreMeters){
+        highScoreMeters=Math.floor(runDistanceMeters);
+        localStorage.setItem(
+          'friKjoringHighScoreMeters',
+          String(highScoreMeters)
+        );
+      }
+
+      updateDistanceDisplay();
+      speed=0;
+      resetKeys();
+      startExplosion();
+      restartTimer=2;
+
+      document.getElementById('message').textContent=
+      '💥 KRASJ! Gatelykt!';
+
+      document.getElementById('message').style.opacity='1';
+
+      break;
+    }
+  }
+}
+ if(!crashed){
   for(const t of trafficCars){
    const dx=Math.abs(t.position.x-car.position.x);
    const dz=Math.abs(t.position.z-car.position.z);
