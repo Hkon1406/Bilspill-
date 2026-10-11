@@ -377,12 +377,12 @@ for(let z=-80; z>-totalRoadLength; z-=300){
 );
 
 border.rotation.x=Math.PI/2;
-border.position.set(0,2.2,-0.01);
+border.position.set(0,2.2,0.02);
 
 sign.add(border);
 
     face.rotation.x = Math.PI/2;
-    face.position.set(0,2.2,0);
+    face.position.set(0,2.2,0.04);
 
     sign.add(face);
 
@@ -393,7 +393,7 @@ sign.add(border);
 
     signClone.position.set(side*8,0,z);
      if(side === 1){
-    signClone.rotation.y = Math.PI;
+  
 }
 
     scene.add(signClone);
