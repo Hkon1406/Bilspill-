@@ -568,7 +568,7 @@ let drivingSeconds=0,coinsCollected=0,fastestSpeedReached=0,longestCleanRun=0;
 let missionClaimed=JSON.parse(localStorage.getItem('friKjoringMissionClaimed')||'{}');
 
 const missions=[
- {id:'distance1',stat:'distance',title:'🚗 Første langtur',description:'Kjør 1 km totalt.',goal:1000,reward:1000000,unit:'m'},
+ {id:'distance1',stat:'distance',title:'🚗 Første langtur',description:'Kjør 1 km totalt.',goal:1000,reward:100,unit:'m'},
  {id:'distance3',stat:'distance',title:'🛣️ På vei videre',description:'Kjør 3 km totalt.',goal:3000,reward:200,unit:'m'},
  {id:'distance10',stat:'distance',title:'🏆 Veikonge',description:'Kjør 10 km totalt.',goal:10000,reward:500,unit:'m'},
  {id:'coins8',stat:'coins',title:'🪙 Myntsamler',description:'Samle 8 mynter.',goal:8,reward:100,unit:'mynter'},
@@ -613,8 +613,8 @@ scene.background.setHex(realisticWorld?0x7fa6bf:0x91d9ff);
  treeMats[1].color.setHex(realisticWorld?0x216137:0x2f8241);
  treeMats[2].color.setHex(realisticWorld?0x285d30:0x347c3a);
  shrubMat.color.setHex(realisticWorld?0x2c6735:0x3f8b42);
- hemi.intensity=realisticWorld?1.65:2.1;
- sun.intensity=realisticWorld?3:2.5;
+ hemi.intensity=realisticWorld?1.2:2.1;
+sun.intensity=realisticWorld?3.4:2.5;
  renderer.toneMappingExposure=realisticWorld?1.05:1.12;
 
  function setCarStyle(vehicle){
