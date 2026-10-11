@@ -349,8 +349,31 @@ streetLights.push(light);
     }
 }
  const signPoleMat = mat(0x888888);
+const signCanvas = document.createElement('canvas');
+signCanvas.width = 256;
+signCanvas.height = 256;
+
+const ctx = signCanvas.getContext('2d');
+
+ctx.fillStyle = 'white';
+ctx.beginPath();
+ctx.arc(128,128,100,0,Math.PI*2);
+ctx.fill();
+
+ctx.lineWidth = 18;
+ctx.strokeStyle = '#cc0000';
+ctx.stroke();
+
+ctx.fillStyle = 'black';
+ctx.font = 'bold 90px Arial';
+ctx.textAlign = 'center';
+ctx.textBaseline = 'middle';
+ctx.fillText('60',128,128);
+
+const signTexture = new THREE.CanvasTexture(signCanvas);
+
 const signFaceMat = new THREE.MeshStandardMaterial({
-    color:0xffffff
+    map: signTexture
 });
 
 for(let z=-80; z>-totalRoadLength; z-=300){
