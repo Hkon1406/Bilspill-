@@ -390,6 +390,7 @@ for(let z=-80; z>-totalRoadLength; z-=300){
 
    const face = new THREE.Mesh(
     new THREE.CylinderGeometry(0.5,0.5,0.05,24),
+    face.material.side = THREE.DoubleSide;
     new THREE.MeshStandardMaterial({
         map: signTexture,
        
