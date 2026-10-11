@@ -524,8 +524,8 @@ house.add(cross2b);
         scene.add(house);
         roadside.push(house);
      houses.push(house);
-    }
-  // Bussholdeplass
+    
+     // Bussholdeplass
 if(Math.random() < 0.04){
 
   const stop = new THREE.Group();
@@ -589,7 +589,15 @@ if(Math.random() < 0.04){
   scene.add(stop);
   roadside.push(stop);
 }
+     
+    }
 
+}
+
+}
+const shrubMat=mat(0x3f8b42);
+for(let i=0;i<100;i++){ }
+  
 }
 const shrubMat=mat(0x3f8b42);
 for(let i=0;i<100;i++){
