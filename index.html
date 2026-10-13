@@ -181,6 +181,21 @@ scene.add(sunMesh);
     sunGlow.position.copy(sunMesh.position);
 
     scene.add(sunGlow);
+  const sunRay1 = new THREE.Mesh(
+    new THREE.PlaneGeometry(18,0.8),
+    new THREE.MeshBasicMaterial({
+        color:0xfff4aa,
+        transparent:true,
+        opacity:0.08
+    })
+);
+
+sunRay1.position.copy(sunMesh.position);
+scene.add(sunRay1);
+
+const sunRay2 = sunRay1.clone();
+sunRay2.rotation.z = Math.PI / 2;
+scene.add(sunRay2);
 }
 
 const mat=(c,r=.8,m=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m});
