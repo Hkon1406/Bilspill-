@@ -572,14 +572,14 @@ stop.add(stopRoof);
     new THREE.BoxGeometry(0.05,2.5,0.05),
     poleMat
   );
-  signPole.position.set(3,1.25,0);
+  signPole.position.set(-3,1.25,0);
   stop.add(signPole);
 
   const busSign = new THREE.Mesh(
     new THREE.BoxGeometry(0.5,0.5,0.05),
     new THREE.MeshStandardMaterial({ color: 0x3366ff })
   );
-  busSign.position.set(1.8,2.3,0); stop.add(busSign);
+  busSign.position.set(-3,2.3,0); stop.add(busSign);
 
 
  const stopSide = Math.random() < 0.5 ? -1 : 1;
