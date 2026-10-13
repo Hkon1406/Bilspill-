@@ -614,6 +614,31 @@ for(let i=0;i<100;i++){
  shrubs.push(shrub);
 }
 
+const rockMat = mat(0x777777);
+
+for(let i=0;i<60;i++){
+
+    const side = Math.random()<.5 ? -1 : 1;
+
+    const rock = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(
+            0.3 + Math.random()*0.7,
+            0
+        ),
+        rockMat
+    );
+
+    rock.position.set(
+        side * (7.5 + Math.random()*4),
+        0.3,
+        -Math.random()*totalRoadLength
+    );
+
+    rock.castShadow = true;
+
+    scene.add(rock);
+}
+ 
 const car=new THREE.Group();
 scene.add(car);
 
