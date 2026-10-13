@@ -253,7 +253,7 @@ const hill=new THREE.Mesh(
     h,
     realisticWorld ? 12 : 7
   ),
-  mat(i % 3 ? 0x80b66b : 0x7b9c91)
+  mat(     realisticWorld     ? (i % 3 ? 0x777777 : 0x666666)     : (i % 3 ? 0x80b66b : 0x7b9c91) )
 );
  hill.position.set(Math.sin(a)*rad,h/2-2,-65+Math.cos(a)*rad);
  hill.rotation.y=Math.random()*Math.PI;
