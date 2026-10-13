@@ -167,6 +167,21 @@ scene.add(sun);
 
 sunMesh.position.set(70,35,-250);
 scene.add(sunMesh);
+ if(realisticWorld){
+
+    const sunGlow = new THREE.Mesh(
+        new THREE.SphereGeometry(12,32,32),
+        new THREE.MeshBasicMaterial({
+            color:0xffee88,
+            transparent:true,
+            opacity:0.15
+        })
+    );
+
+    sunGlow.position.copy(sunMesh.position);
+
+    scene.add(sunGlow);
+}
 
 const mat=(c,r=.8,m=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m});
 const grass=mat(0x67b64e);
