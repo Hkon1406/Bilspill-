@@ -996,17 +996,6 @@ scene.background.setHex(realisticWorld?0x7fa6bf:0x91d9ff);
  treeMats[1].color.setHex(realisticWorld?0x216137:0x2f8241);
  treeMats[2].color.setHex(realisticWorld?0x285d30:0x347c3a);
  shrubMat.color.setHex(realisticWorld?0x2c6735:0x3f8b42);
- scene.traverse(obj => {
-
-    if(obj.userData.isMountain){
-
-        obj.material.color.setHex(
-            realisticWorld ? 0x777777 : 0x80b66b
-        );
-
-    }
-
-});
  hemi.intensity=realisticWorld?1.2:2.1;
 sun.intensity=realisticWorld?3.4:2.5;
  renderer.toneMappingExposure=realisticWorld?1.05:1.12;
