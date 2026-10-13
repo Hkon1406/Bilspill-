@@ -248,13 +248,12 @@ for(let i=0;i<24;i++){
  const rad=145+Math.random()*60;
  const h=20+Math.random()*25;
 const hill=new THREE.Mesh(
- hill.userData.isMountain = true;
   new THREE.ConeGeometry(
     35 + Math.random() * 30,
     h,
     realisticWorld ? 12 : 7
   ),
-mat(i % 3 ? 0x80b66b : 0x7b9c91)
+  mat(i % 3 ? 0x80b66b : 0x7b9c91)
 );
  hill.position.set(Math.sin(a)*rad,h/2-2,-65+Math.cos(a)*rad);
  hill.rotation.y=Math.random()*Math.PI;
