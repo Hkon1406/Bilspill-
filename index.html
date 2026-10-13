@@ -158,6 +158,15 @@ sun.shadow.camera.right=35;
 sun.shadow.camera.top=35;
 sun.shadow.camera.bottom=-35;
 scene.add(sun);
+ const sunMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(15,32,32),
+    new THREE.MeshBasicMaterial({
+        color:0xffee88
+    })
+);
+
+sunMesh.position.set(-180,120,-250);
+scene.add(sunMesh);
 
 const mat=(c,r=.8,m=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m});
 const grass=mat(0x67b64e);
