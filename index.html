@@ -667,6 +667,27 @@ for(let z=-500; z>-totalRoadLength; z-=2500){
     canopy.position.set(0,4.5,-5);
 
     station.add(canopy);
+ // Pumpe 1
+const pump1 = new THREE.Mesh(
+    new THREE.BoxGeometry(0.8,2,0.8),
+    new THREE.MeshStandardMaterial({
+        color:0x444444
+    })
+);
+
+pump1.position.set(-1.5,1,-5);
+station.add(pump1);
+
+// Pumpe 2
+const pump2 = new THREE.Mesh(
+    new THREE.BoxGeometry(0.8,2,0.8),
+    new THREE.MeshStandardMaterial({
+        color:0x444444
+    })
+);
+
+pump2.position.set(1.5,1,-5);
+station.add(pump2);
 
     station.position.set(
         14,
