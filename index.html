@@ -688,7 +688,15 @@ const pump2 = new THREE.Mesh(
 
 pump2.position.set(1.5,1,-5);
 station.add(pump2);
+const stationAsphalt = new THREE.Mesh(
+    new THREE.BoxGeometry(10,0.05,8),
+    asphalt
+);
 
+stationAsphalt.position.set(0,0.03,-5);
+
+station.add(stationAsphalt);
+ 
     station.position.set(
         14,
         0,
