@@ -655,7 +655,23 @@ for(let z=-500; z>-totalRoadLength; z-=2500){
 
     building.position.y = 2;
     station.add(building);
+// Butikkvindu
+const shopWindow = new THREE.Mesh(
+    new THREE.BoxGeometry(4,2,0.08),
+    new THREE.MeshStandardMaterial({
+        color:0x88ccff
+    })
+);
 
+shopWindow.position.set(
+    0,
+    2,
+    3.55
+);
+
+station.add(shopWindow);
+`
+ 
     // Tak over pumpene
     const canopy = new THREE.Mesh(
         new THREE.BoxGeometry(8,0.3,5),
