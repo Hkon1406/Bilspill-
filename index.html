@@ -635,12 +635,6 @@ stop.position.set(
      
     }
 
-
-
-} 
-
-  
-// } 
 for(let z=-500; z>-totalRoadLength; z-=2500){
 
     const station = new THREE.Group();
@@ -738,6 +732,12 @@ station.add(stationAsphalt);
     scene.add(station);
     roadside.push(station);
 }
+
+} 
+
+  
+// } 
+
  
 const shrubMat=mat(0x3f8b42);
 for(let i=0;i<100;i++){
